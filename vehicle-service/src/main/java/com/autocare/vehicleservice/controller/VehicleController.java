@@ -42,8 +42,12 @@ public class VehicleController {
     public ResponseEntity<VehicleResponse> getVehicleById(
             @PathVariable Long id,
             Authentication authentication) {
-        Long userId = (Long) authentication.getPrincipal();
-        VehicleResponse response = vehicleService.getVehicleById(id, userId);
+        if (authentication != null && authentication.getPrincipal() instanceof Long userId) {
+            VehicleResponse response = vehicleService.getVehicleById(id, userId);
+            return ResponseEntity.ok(response);
+        }
+        // Allow inter-service calls without auth (ownership validated by calling service)
+        VehicleResponse response = vehicleService.getVehicleByIdPublic(id);
         return ResponseEntity.ok(response);
     }
 

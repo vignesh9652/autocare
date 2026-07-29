@@ -58,6 +58,16 @@ public class VehicleService {
         return toResponse(vehicle);
     }
 
+    /**
+     * Get vehicle by ID without ownership check.
+     * Used for inter-service communication where auth is propagated via internal channels.
+     */
+    public VehicleResponse getVehicleByIdPublic(Long id) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new VehicleNotFoundException("Vehicle not found with id: " + id));
+        return toResponse(vehicle);
+    }
+
     public VehicleResponse updateVehicle(Long id, Long userId, VehicleRequest request) {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new VehicleNotFoundException("Vehicle not found with id: " + id));
@@ -97,6 +107,7 @@ public class VehicleService {
     private VehicleResponse toResponse(Vehicle vehicle) {
         return new VehicleResponse(
                 vehicle.getId(),
+                vehicle.getUserId(),
                 vehicle.getMake(),
                 vehicle.getModel(),
                 vehicle.getYear(),

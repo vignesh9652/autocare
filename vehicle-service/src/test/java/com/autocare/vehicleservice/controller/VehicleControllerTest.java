@@ -49,7 +49,7 @@ class VehicleControllerTest {
     }
 
     private VehicleResponse createSampleResponse() {
-        return new VehicleResponse(vehicleId, "Toyota", "Camry", 2022,
+        return new VehicleResponse(vehicleId, userId, "Toyota", "Camry", 2022,
                 "ABC-1234", VehicleType.CAR, LocalDateTime.now());
     }
 
@@ -136,7 +136,7 @@ class VehicleControllerTest {
 
     @Test
     void updateVehicle_ShouldReturn200() throws Exception {
-        VehicleResponse updated = new VehicleResponse(vehicleId, "Honda", "Accord", 2023,
+        VehicleResponse updated = new VehicleResponse(vehicleId, userId, "Honda", "Accord", 2023,
                 "ABC-1234", VehicleType.CAR, LocalDateTime.now());
         when(vehicleService.updateVehicle(eq(vehicleId), eq(userId), any(VehicleRequest.class)))
                 .thenReturn(updated);

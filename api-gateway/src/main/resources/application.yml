@@ -4,13 +4,55 @@ server:
 spring:
   application:
     name: api-gateway
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.gateway.config.GatewayHttpHeadersFilterAutoConfiguration
 
   cloud:
     gateway:
+      filter:
+        remove-hop-by-hop-headers:
+          enabled: false
+      routes:
+        # User Service - Auth endpoints
+        - id: user-service-auth
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/auth/**
+
+        # Vehicle Service
+        - id: vehicle-service
+          uri: lb://VEHICLE-SERVICE
+          predicates:
+            - Path=/api/vehicles/**
+
+        # Mechanic Service
+        - id: mechanic-service
+          uri: lb://MECHANIC-SERVICE
+          predicates:
+            - Path=/api/mechanics/**
+
+        # Booking Service
+        - id: booking-service
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/bookings/**
+
+        # Spare Parts Service
+        - id: spareparts-service
+          uri: lb://SPAREPARTS-SERVICE
+          predicates:
+            - Path=/api/parts/**
+
+        # Recommendations (also routed to spareparts-service)
+        - id: spareparts-recommendations
+          uri: lb://SPAREPARTS-SERVICE
+          predicates:
+            - Path=/api/recommendations/**
+
       discovery:
         locator:
-          enabled: true
-          lower-case-service-id: true
+          enabled: false
 
 eureka:
   client:
