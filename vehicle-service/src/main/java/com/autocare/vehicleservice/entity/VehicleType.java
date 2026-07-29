@@ -2,5 +2,11 @@ package com.autocare.vehicleservice.entity;
 
 public enum VehicleType {
     CAR,
-    BIKE
+    SEDAN,
+    SUV,
+    HATCHBACK,
+    TRUCK,
+    VAN,
+    BIKE,
+    MOTORCYCLE
 }

@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public class VehicleResponse {
 
     private Long id;
+    private Long userId;
     private String make;
     private String model;
     private int year;
@@ -15,16 +16,25 @@ public class VehicleResponse {
 
     public VehicleResponse() {}
 
-    public VehicleResponse(Long id, String make, String model, int year,
+    public VehicleResponse(Long id, Long userId, String make, String model, int year,
                            String registrationNumber, VehicleType vehicleType,
                            LocalDateTime createdAt) {
         this.id = id;
+        this.userId = userId;
         this.make = make;
         this.model = model;
         this.year = year;
         this.registrationNumber = registrationNumber;
         this.vehicleType = vehicleType;
         this.createdAt = createdAt;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public Long getId() {
