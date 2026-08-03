@@ -24,13 +24,17 @@ public class RabbitMQConfig {
     }
 
     /**
-     * Configure RabbitTemplate to use JSON message converter
-     * so consumers can deserialize events properly.
+     * Configure RabbitTemplate to use JSON message converter.
+     * Disables the {@code __TypeId__} header so notification-service (which
+     * does not have our event DTOs on its classpath) can deserialize the
+     * payloads into a {@code Map} without a ClassNotFoundException.
      */
     @Bean
     public RabbitTemplate rabbitTemplate(org.springframework.amqp.rabbit.connection.ConnectionFactory connectionFactory,
                                           Jackson2JsonMessageConverter converter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        converter.setTypePrecedence(
+                org.springframework.amqp.support.converter.Jackson2JavaTypeMapper.TypePrecedence.INFERRED);
         template.setMessageConverter(converter);
         return template;
     }
