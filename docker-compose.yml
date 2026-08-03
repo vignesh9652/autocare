@@ -28,11 +28,12 @@ services:
       - "5672:5672"
       - "15672:15672"
     healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "check_port_connectivity" ]
-      interval: 30s
+      # check_port_connectivity takes >10s (exceeds the timeout), use fast ping instead
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 15s
       timeout: 10s
       retries: 5
-      start_period: 20s
+      start_period: 30s
 
   # ===================== SERVICE REGISTRY =====================
 
@@ -44,6 +45,7 @@ services:
       - "8761:8761"
     environment:
       EUREKA_INSTANCE_HOSTNAME: eureka-server
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8761/actuator/health" ]
       interval: 15s
@@ -65,6 +67,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: Vignesh@2004
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
@@ -91,6 +95,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: Vignesh@2004
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
@@ -117,6 +123,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: Vignesh@2004
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
@@ -145,6 +153,8 @@ services:
       SPRING_RABBITMQ_PORT: "5672"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
@@ -172,6 +182,8 @@ services:
       SPRING_RABBITMQ_PORT: "5672"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8085/actuator/health" ]
       interval: 30s
@@ -189,15 +201,48 @@ services:
     container_name: autocare-spareparts
     restart: unless-stopped
     ports:
-      - "8086:8086"
+      - "8087:8087"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/spareparts_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: Vignesh@2004
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8087/actuator/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  payment-service:
+    build: ./payment-service
+    container_name: autocare-payment
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/payment_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Vignesh@2004
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
+      APP_JWT_EXPIRATION_MS: "86400000"
+      APP_WEBHOOK_SECRET: autocare-webhook-secret
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8086/actuator/health" ]
       interval: 30s
@@ -206,6 +251,8 @@ services:
       start_period: 40s
     depends_on:
       mysql:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
@@ -219,6 +266,8 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
+      JAVA_TOOL_OPTIONS: "-Xmx256m"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
       interval: 30s

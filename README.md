@@ -34,18 +34,18 @@ A Spring Boot microservices platform for managing vehicle repair bookings, built
             │ Creates bookings, publishes   │
             │ events to RabbitMQ, validates │
             │ vehicle/mechanic via discovery│
-            └──┬────────────┬───────────────┘
-               │            │
-               ▼            ▼
-   ┌──────────────────┐  ┌────────────────────┐
-   │Notification Svc  │  │ Spare Parts Service│
-   │    (:8085)       │  │     (:8086)        │
-   ├──────────────────┤  ├────────────────────┤
-   │ Consumes         │  │ Parts catalog,     │
-   │ RabbitMQ events, │  │ recommendations,   │
-   │ logs/tracks      │  │ stock management,  │
-   │ notifications    │  │ ordering workflow  │
-   └──────────────────┘  └────────────────────┘
+            └──┬────────────┬───────────────┬──────┘
+               │            │               │
+               ▼            ▼               ▼
+   ┌──────────────────┐  ┌────────────────────┐  ┌────────────────────┐
+   │Notification Svc  │  │ Spare Parts Service│  │   Payment Service  │
+   │    (:8085)       │  │     (:8087)        │  │     (:8086)        │
+   ├──────────────────┤  ├────────────────────┤  ├────────────────────┤
+   │ Consumes         │  │ Parts catalog,     │  │ Payment initiation │
+   │ RabbitMQ events, │  │ recommendations,   │  │ webhook processing,│
+   │ logs/tracks      │  │ stock management,  │  │ publishes events to│
+   │ notifications    │  │ ordering workflow  │  │ autocare.events    │
+   └──────────────────┘  └────────────────────┘  └────────────────────┘
                            │
                            ▼
                     ┌──────────────┐
@@ -66,7 +66,8 @@ A Spring Boot microservices platform for managing vehicle repair bookings, built
 | **Mechanic Service** | 8083 | Mechanic profiles, availability, ratings | Spring Data JPA, MySQL |
 | **Booking Service** | 8084 | Booking creation, status workflow, RabbitMQ events | Spring Data JPA, MySQL, RabbitMQ |
 | **Notification Service** | 8085 | Consumes RabbitMQ events, simulates notifications | Spring AMQP, RabbitMQ |
-| **Spare Parts Service** | 8086 | Parts catalog, recommendations, stock management, ordering | Spring Data JPA, MySQL |
+| **Payment Service** | 8086 | Payment initiation, gateway webhooks, payment status events | Spring Data JPA, MySQL, RabbitMQ |
+| **Spare Parts Service** | 8087 | Parts catalog, recommendations, stock management, ordering | Spring Data JPA, MySQL |
 
 ### Infrastructure
 
@@ -110,6 +111,7 @@ cd mechanic-service && mvn clean package -DskipTests -q && cd ..
 cd booking-service && mvn clean package -DskipTests -q && cd ..
 cd notification-service && mvn clean package -DskipTests -q && cd ..
 cd spareparts-service && mvn clean package -DskipTests -q && cd ..
+cd payment-service && mvn clean package -DskipTests -q && cd ..
 cd api-gateway && mvn clean package -DskipTests -q && cd ..
 
 # Or build just a single service:
@@ -118,7 +120,7 @@ cd booking-service && mvn clean package -DskipTests -q && cd ..
 
 ### 3. Start All Services (Local)
 
-Open **8 separate terminal windows** and run in order:
+Open **9 separate terminal windows** and run in order:
 
 ```bash
 # Terminal 1: Eureka Server (port 8761)
@@ -139,10 +141,13 @@ cd booking-service && mvn spring-boot:run
 # Terminal 6: Notification Service (port 8085)
 cd notification-service && mvn spring-boot:run
 
-# Terminal 7: Spare Parts Service (port 8086)
+# Terminal 7: Spare Parts Service (port 8087)
 cd spareparts-service && mvn spring-boot:run
 
-# Terminal 8: API Gateway (port 8080)
+# Terminal 8: Payment Service (port 8086)
+cd payment-service && mvn spring-boot:run
+
+# Terminal 9: API Gateway (port 8080)
 cd api-gateway && mvn spring-boot:run
 ```
 
@@ -161,6 +166,7 @@ curl http://localhost:8083/actuator/health
 curl http://localhost:8084/actuator/health
 curl http://localhost:8085/actuator/health
 curl http://localhost:8086/actuator/health
+curl http://localhost:8087/actuator/health
 ```
 
 All should return `{"status":"UP"}`.
@@ -169,7 +175,7 @@ All should return `{"status":"UP"}`.
 
 ## Docker: Run EVERYTHING in Containers
 
-One command to build and start all 9 containers:
+One command to build and start all 10 containers:
 
 ```bash
 # Build images & start all services (first run: ~5-10 min)
@@ -203,7 +209,8 @@ docker-compose down -v
 | `autocare-mechanic` | `localhost:8083` | — |
 | `autocare-booking` | `localhost:8084` | — |
 | `autocare-notification` | `localhost:8085` | — |
-| `autocare-spareparts` | `localhost:8086` | — |
+| `autocare-spareparts` | `localhost:8087` | — |
+| `autocare-payment` | `localhost:8086` | — |
 | `autocare-gateway` | `localhost:8080` | — |
 
 > **Note:** Inside Docker, services connect to MySQL at `mysql:3306`, RabbitMQ at `rabbitmq:5672`, and Eureka at `http://eureka-server:8761/eureka`.
@@ -282,15 +289,15 @@ curl -X PUT http://localhost:8084/api/bookings/1/status \
 
 ```bash
 # Browse catalog (public — no token required)
-curl "http://localhost:8086/api/parts"
-curl "http://localhost:8086/api/parts?category=BRAKES"
-curl "http://localhost:8086/api/parts?search=brake"
+curl "http://localhost:8087/api/parts"
+curl "http://localhost:8087/api/parts?category=BRAKES"
+curl "http://localhost:8087/api/parts?search=brake"
 
 # Get part details (public — includes tutorial & installation steps)
-curl http://localhost:8086/api/parts/1
+curl http://localhost:8087/api/parts/1
 
 # Add a new part (requires token)
-curl -X POST http://localhost:8086/api/parts \
+curl -X POST http://localhost:8087/api/parts \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{
@@ -305,7 +312,7 @@ curl -X POST http://localhost:8086/api/parts \
   }'
 
 # Mechanic recommends a part for a booking (requires token)
-curl -X POST http://localhost:8086/api/recommendations \
+curl -X POST http://localhost:8087/api/recommendations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{
@@ -316,16 +323,48 @@ curl -X POST http://localhost:8086/api/recommendations \
   }'
 
 # View recommendations for a booking (requires token)
-curl http://localhost:8086/api/recommendations/booking/1 \
+curl http://localhost:8087/api/recommendations/booking/1 \
   -H "Authorization: Bearer <token>"
 
 # Customer approves or rejects a recommendation (requires token)
-curl -X PUT http://localhost:8086/api/recommendations/1/decision \
+curl -X PUT http://localhost:8087/api/recommendations/1/decision \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"status":"APPROVED"}'
 ```
 (On approval, stock is decremented atomically; on insufficient stock, a 409 is returned.)
+
+### Payment Service (requires token; webhook endpoint is public)
+
+```bash
+# Initiate a payment for a booking or approved spare-part recommendation
+curl -X POST http://localhost:8086/api/payments \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "referenceType": "BOOKING",
+    "referenceId": 1,
+    "amount": 1500.00,
+    "paymentMethod": "UPI"
+  }'
+
+# List my transactions
+curl http://localhost:8086/api/payments -H "Authorization: Bearer <token>"
+
+# Get transaction status
+curl http://localhost:8086/api/payments/1 -H "Authorization: Bearer <token>"
+
+# Simulate a gateway webhook callback (public - verified via HMAC signature)
+curl -X POST http://localhost:8086/api/payments/webhook \
+  -H "Content-Type: application/json" \
+  -d '{
+    "gatewayTransactionId": "<from create response>",
+    "status": "SUCCESS",
+    "signature": "<base64 hmac>"
+  }'
+```
+
+The webhook updates the transaction status and publishes `payment.success` / `payment.failed` to the `autocare.events` exchange. Webhook processing is **idempotent** — duplicate callbacks return `200` without re-publishing events. With the mock gateway, the expected signature is `MockGatewayService.computeSignature(gatewayTransactionId, status)` (HMAC-SHA256 of `gatewayTransactionId + "." + status` using `app.webhook.secret`).
 
 ### Gateway (single entry point)
 
@@ -336,6 +375,7 @@ curl http://localhost:8080/api/auth/login ...
 curl http://localhost:8080/api/vehicles ...
 curl http://localhost:8080/api/mechanics ...
 curl http://localhost:8080/api/bookings ...
+curl http://localhost:8080/api/payments ...
 curl http://localhost:8080/api/parts ...
 curl http://localhost:8080/api/recommendations ...
 ```
@@ -372,12 +412,14 @@ Valid transitions:
 
 ## RabbitMQ Events
 
-When a booking is **created** or **completed**, the booking-service publishes events to the `autocare.events` topic exchange:
+Services publish events to the `autocare.events` topic exchange:
 
 | Event | Routing Key | Published When | Consumed By |
 |-------|-------------|----------------|-------------|
 | `BookingCreatedEvent` | `booking.created` | POST `/api/bookings` | notification-service |
 | `BookingCompletedEvent` | `booking.completed` | Status → `COMPLETED` | notification-service |
+| `PaymentSuccessEvent` | `payment.success` | Webhook → `SUCCESS` | notification-service |
+| `PaymentFailedEvent` | `payment.failed` | Webhook → `FAILED` | notification-service |
 
 **View events in the RabbitMQ Management UI:**
 1. Open [http://localhost:15672](http://localhost:15672) (guest/guest)
@@ -412,7 +454,8 @@ autocare/
 ├── mechanic-service/          # Mechanic profiles (port 8083)
 ├── booking-service/           # Booking management (port 8084)
 ├── notification-service/      # Event consumer (port 8085)
-└── spareparts-service/        # Spare parts catalog & recommendations (port 8086)
+├── spareparts-service/        # Spare parts catalog & recommendations (port 8087)
+└── payment-service/           # Payment processing (port 8086)
 ```
 
 ---
@@ -435,6 +478,7 @@ Each service accepts these environment variable overrides in Docker:
 | `EUREKA_INSTANCE_PREFER_IP_ADDRESS` | `true` | Register with IP |
 | `APP_JWT_SECRET` | `5a3f8c92...` | JWT signing secret |
 | `APP_JWT_EXPIRATION_MS` | `86400000` | JWT token expiry |
+| `APP_WEBHOOK_SECRET` | `autocare-webhook-secret` | Payment gateway webhook signing secret |
 
 ---
 
