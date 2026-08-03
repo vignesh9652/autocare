@@ -1,6 +1,6 @@
-package com.autocare.paymentservice.security;
+package com.autocare.adminservice.security;
 
-import com.autocare.paymentservice.util.JwtUtil;
+import com.autocare.adminservice.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +17,14 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * JWT validation filter identical to the other AutoCare services, extended to
+ * also load the token's {@code role} claim into Spring Security authorities.
+ *
+ * The authorities ({@code ROLE_<role>}) are what let SecurityConfig enforce
+ * {@code hasRole("ADMIN")} — a CUSTOMER or MECHANIC token gets a 403 from
+ * Spring Security's access-denied handler instead of reaching any endpoint.
+ */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 

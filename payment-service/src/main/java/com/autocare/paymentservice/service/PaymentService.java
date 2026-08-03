@@ -168,6 +168,16 @@ public class PaymentService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * All transactions across all users. Admin-only (guarded by SecurityConfig).
+     */
+    public List<PaymentResponse> getAllTransactions() {
+        return transactionRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     private PaymentResponse toResponse(Transaction transaction) {
         return new PaymentResponse(
                 transaction.getId(),

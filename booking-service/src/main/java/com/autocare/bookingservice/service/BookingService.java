@@ -78,6 +78,16 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * All bookings across all users. Admin-only (guarded by SecurityConfig).
+     */
+    public List<BookingResponse> getAllBookings() {
+        return bookingRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public BookingResponse getBookingById(Long id, Long userId) {
         Booking booking = findBookingByIdAndOwnershipCheck(id, userId);
         return toResponse(booking);

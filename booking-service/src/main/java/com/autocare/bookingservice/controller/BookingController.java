@@ -39,6 +39,17 @@ public class BookingController {
         return ResponseEntity.ok(bookings);
     }
 
+    /**
+     * All bookings across all users. Admin-only — requires the ADMIN role
+     * (enforced by SecurityConfig). Consumed by the admin-service aggregation
+     * layer (BookingServiceClient).
+     */
+    @GetMapping("/admin/all")
+    public ResponseEntity<List<BookingResponse>> getAllBookings() {
+        List<BookingResponse> bookings = bookingService.getAllBookings();
+        return ResponseEntity.ok(bookings);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBookingById(
             @PathVariable Long id,

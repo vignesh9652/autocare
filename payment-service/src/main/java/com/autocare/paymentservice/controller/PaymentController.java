@@ -62,4 +62,15 @@ public class PaymentController {
         List<PaymentResponse> transactions = paymentService.getUserTransactions(userId);
         return ResponseEntity.ok(transactions);
     }
+
+    /**
+     * All transactions across all users. Admin-only — requires the ADMIN role
+     * (enforced by SecurityConfig). Consumed by the admin-service aggregation
+     * layer (PaymentServiceClient).
+     */
+    @GetMapping("/admin/all")
+    public ResponseEntity<List<PaymentResponse>> getAllTransactions() {
+        List<PaymentResponse> transactions = paymentService.getAllTransactions();
+        return ResponseEntity.ok(transactions);
+    }
 }
