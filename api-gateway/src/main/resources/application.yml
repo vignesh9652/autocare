@@ -50,6 +50,12 @@ spring:
           predicates:
             - Path=/api/recommendations/**
 
+        # Review Service
+        - id: review-service
+          uri: lb://REVIEW-SERVICE
+          predicates:
+            - Path=/api/reviews/**
+
       discovery:
         locator:
           enabled: false
