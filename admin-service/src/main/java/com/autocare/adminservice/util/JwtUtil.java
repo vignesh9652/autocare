@@ -1,4 +1,4 @@
-package com.autocare.bookingservice.util;
+package com.autocare.adminservice.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

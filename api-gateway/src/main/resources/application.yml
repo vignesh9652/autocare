@@ -56,6 +56,12 @@ spring:
           predicates:
             - Path=/api/reviews/**
 
+        # Admin Service (admin-only aggregation endpoints)
+        - id: admin-service
+          uri: lb://ADMIN-SERVICE
+          predicates:
+            - Path=/api/admin/**
+
       discovery:
         locator:
           enabled: false

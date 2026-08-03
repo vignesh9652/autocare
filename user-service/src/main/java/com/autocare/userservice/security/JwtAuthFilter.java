@@ -1,6 +1,6 @@
-package com.autocare.paymentservice.security;
+package com.autocare.userservice.security;
 
-import com.autocare.paymentservice.util.JwtUtil;
+import com.autocare.userservice.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +17,12 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * JWT validation filter (same shared-secret pattern as the other AutoCare
+ * services). Also loads the token's {@code role} claim into authorities so
+ * SecurityConfig can enforce {@code hasRole("ADMIN")} on the admin-only
+ * endpoints.
+ */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 

@@ -26,6 +26,8 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Admin-only: all-transactions listing for the admin-service aggregation layer
+                .requestMatchers("/api/payments/admin/**").hasRole("ADMIN")
                 // Webhook is called by the payment gateway, not by users - no JWT required
                 .requestMatchers("/api/payments/webhook").permitAll()
                 .requestMatchers("/api/payments/**").authenticated()
