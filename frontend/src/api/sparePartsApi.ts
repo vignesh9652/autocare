@@ -3,6 +3,7 @@ import type {
   Recommendation,
   RecommendationDecisionRequest,
   RecommendationRequest,
+  RecommendationStatus,
   SparePart,
   SparePartRequest,
 } from '@/types';
@@ -42,17 +43,18 @@ export async function createRecommendation(
   return data;
 }
 
-/** GET /api/recommendations/booking/{bookingId} */
-export async function getBookingRecommendations(bookingId: number): Promise<Recommendation[]> {
+/** GET /api/recommendations/booking/{bookingId} — recommendations for one booking. */
+export async function getRecommendationsForBooking(bookingId: number): Promise<Recommendation[]> {
   const { data } = await api.get<Recommendation[]>(`/api/recommendations/booking/${bookingId}`);
   return data;
 }
 
-/** PUT /api/recommendations/{id}/decision */
+/** PUT /api/recommendations/{id}/decision — body is just { status }. */
 export async function decideRecommendation(
   id: number,
-  payload: RecommendationDecisionRequest,
+  status: RecommendationStatus,
 ): Promise<Recommendation> {
+  const payload: RecommendationDecisionRequest = { status };
   const { data } = await api.put<Recommendation>(`/api/recommendations/${id}/decision`, payload);
   return data;
 }

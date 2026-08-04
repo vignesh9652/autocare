@@ -17,5 +17,7 @@ export interface Payment {
   currency: string;
   status: PaymentStatus;
   gatewayTransactionId: string;
+  /** e.g. CARD, UPI, NETBANKING — returned by the backend since the paymentMethod DTO change. */
+  paymentMethod?: string;
   createdAt: string;
 }

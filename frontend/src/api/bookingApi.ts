@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Booking, BookingRequest, BookingStatusUpdateRequest } from '@/types';
+import type { Booking, BookingRequest, BookingStatus, BookingStatusUpdateRequest } from '@/types';
 
 /** POST /api/bookings */
 export async function createBooking(payload: BookingRequest): Promise<Booking> {
@@ -8,7 +8,7 @@ export async function createBooking(payload: BookingRequest): Promise<Booking> {
 }
 
 /** GET /api/bookings — current user's bookings. */
-export async function getMyBookings(): Promise<Booking[]> {
+export async function getBookings(): Promise<Booking[]> {
   const { data } = await api.get<Booking[]>('/api/bookings');
   return data;
 }
@@ -25,11 +25,12 @@ export async function getBooking(id: number): Promise<Booking> {
   return data;
 }
 
-/** PUT /api/bookings/{id}/status */
+/** PUT /api/bookings/{id}/status — body is just { status }. */
 export async function updateBookingStatus(
   id: number,
-  payload: BookingStatusUpdateRequest,
+  status: BookingStatus,
 ): Promise<Booking> {
+  const payload: BookingStatusUpdateRequest = { status };
   const { data } = await api.put<Booking>(`/api/bookings/${id}/status`, payload);
   return data;
 }
