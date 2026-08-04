@@ -13,6 +13,22 @@ spring:
       filter:
         remove-hop-by-hop-headers:
           enabled: false
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            # The React frontend runs on its own origin; allow it to call the
+            # gateway directly (baseURL = VITE_API_BASE_URL) in development.
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:5173"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            exposedHeaders:
+              - "Location"
+            allowCredentials: true
+            maxAge: 3600
       routes:
         # User Service - Auth endpoints
         - id: user-service-auth

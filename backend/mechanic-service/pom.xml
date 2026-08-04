@@ -107,6 +107,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- H2 (embedded) - so @SpringBootTest runs in CI without MySQL -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>
