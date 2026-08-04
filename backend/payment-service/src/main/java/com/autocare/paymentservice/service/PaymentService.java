@@ -187,6 +187,7 @@ public class PaymentService {
                 transaction.getCurrency(),
                 transaction.getStatus(),
                 transaction.getGatewayTransactionId(),
+                transaction.getPaymentMethod(),
                 transaction.getCreatedAt()
         );
     }

@@ -5,11 +5,16 @@ import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
-import VehiclesPage from '@/pages/vehicles/VehiclesPage';
-import MechanicsPage from '@/pages/mechanics/MechanicsPage';
-import BookingsPage from '@/pages/bookings/BookingsPage';
-import SparePartsPage from '@/pages/spareparts/SparePartsPage';
-import PaymentsPage from '@/pages/payments/PaymentsPage';
+import VehicleList from '@/pages/vehicles/VehicleList';
+import VehicleForm from '@/pages/vehicles/VehicleForm';
+import MechanicList from '@/pages/mechanics/MechanicList';
+import BookingList from '@/pages/bookings/BookingList';
+import NewBooking from '@/pages/bookings/NewBooking';
+import BookingDetail from '@/pages/bookings/BookingDetail';
+import Catalog from '@/pages/spareparts/Catalog';
+import PartDetail from '@/pages/spareparts/PartDetail';
+import PaymentHistory from '@/pages/payments/PaymentHistory';
+import Checkout from '@/pages/payments/Checkout';
 import ReviewsPage from '@/pages/reviews/ReviewsPage';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 
@@ -31,46 +36,106 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
+      {/* Vehicles */}
       <Route
         path="/vehicles"
         element={
           <ProtectedRoute>
-            <VehiclesPage />
+            <VehicleList />
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/vehicles/new"
+        element={
+          <ProtectedRoute>
+            <VehicleForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/vehicles/:id/edit"
+        element={
+          <ProtectedRoute>
+            <VehicleForm />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Mechanics (browse only) */}
       <Route
         path="/mechanics"
         element={
           <ProtectedRoute>
-            <MechanicsPage />
+            <MechanicList />
           </ProtectedRoute>
         }
       />
+
+      {/* Bookings */}
       <Route
         path="/bookings"
         element={
           <ProtectedRoute>
-            <BookingsPage />
+            <BookingList />
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/bookings/new"
+        element={
+          <ProtectedRoute>
+            <NewBooking />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/bookings/:id"
+        element={
+          <ProtectedRoute>
+            <BookingDetail />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Spare parts */}
       <Route
         path="/spare-parts"
         element={
           <ProtectedRoute>
-            <SparePartsPage />
+            <Catalog />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/payments"
+        path="/spare-parts/:id"
         element={
           <ProtectedRoute>
-            <PaymentsPage />
+            <PartDetail />
           </ProtectedRoute>
         }
       />
+
+      {/* Payments */}
+      <Route
+        path="/payments"
+        element={
+          <ProtectedRoute>
+            <PaymentHistory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payments/:bookingId/checkout"
+        element={
+          <ProtectedRoute>
+            <Checkout />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Reviews */}
       <Route
         path="/reviews"
         element={

@@ -2,7 +2,7 @@ import { api } from './client';
 import type { Vehicle, VehicleRequest } from '@/types';
 
 /** GET /api/vehicles — current user's vehicles. */
-export async function getMyVehicles(): Promise<Vehicle[]> {
+export async function getVehicles(): Promise<Vehicle[]> {
   const { data } = await api.get<Vehicle[]>('/api/vehicles');
   return data;
 }
