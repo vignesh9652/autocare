@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { register as registerApi } from '@/api/authApi';
 import { getApiErrorMessage } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Card, Input } from '@/components';
@@ -17,11 +16,10 @@ const EMPTY: FormState = { name: '', email: '', phone: '', password: '', confirm
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { register, isLoading } = useAuth();
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -40,20 +38,16 @@ export default function RegisterPage() {
       return;
     }
 
-    setLoading(true);
     try {
-      const auth = await registerApi({
+      await register({
         name: form.name,
         email: form.email,
         password: form.password,
         phone: form.phone || undefined,
       });
-      login(auth);
       navigate('/vehicles', { replace: true });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Registration failed. Please try again.'));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -119,8 +113,8 @@ export default function RegisterPage() {
             onChange={handleChange}
             placeholder="Repeat your password"
           />
-          <Button type="submit" loading={loading} className="w-full">
-            {loading ? 'Creating account…' : 'Create Account'}
+          <Button type="submit" loading={isLoading} className="w-full">
+            {isLoading ? 'Creating account…' : 'Create Account'}
           </Button>
         </form>
 
