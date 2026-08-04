@@ -38,7 +38,7 @@ services:
   # ===================== SERVICE REGISTRY =====================
 
   eureka-server:
-    build: ./eureka-server
+    build: ../backend/eureka-server
     container_name: autocare-eureka
     restart: unless-stopped
     ports:
@@ -56,7 +56,7 @@ services:
   # ===================== MICROSERVICES =====================
 
   user-service:
-    build: ./user-service
+    build: ../backend/user-service
     container_name: autocare-user
     restart: unless-stopped
     ports:
@@ -84,7 +84,7 @@ services:
         condition: service_healthy
 
   vehicle-service:
-    build: ./vehicle-service
+    build: ../backend/vehicle-service
     container_name: autocare-vehicle
     restart: unless-stopped
     ports:
@@ -112,7 +112,7 @@ services:
         condition: service_healthy
 
   mechanic-service:
-    build: ./mechanic-service
+    build: ../backend/mechanic-service
     container_name: autocare-mechanic
     restart: unless-stopped
     ports:
@@ -140,7 +140,7 @@ services:
         condition: service_healthy
 
   booking-service:
-    build: ./booking-service
+    build: ../backend/booking-service
     container_name: autocare-booking
     restart: unless-stopped
     ports:
@@ -172,7 +172,7 @@ services:
         condition: service_healthy
 
   notification-service:
-    build: ./notification-service
+    build: ../backend/notification-service
     container_name: autocare-notification
     restart: unless-stopped
     ports:
@@ -197,7 +197,7 @@ services:
         condition: service_healthy
 
   spareparts-service:
-    build: ./spareparts-service
+    build: ../backend/spareparts-service
     container_name: autocare-spareparts
     restart: unless-stopped
     ports:
@@ -225,7 +225,7 @@ services:
         condition: service_healthy
 
   payment-service:
-    build: ./payment-service
+    build: ../backend/payment-service
     container_name: autocare-payment
     restart: unless-stopped
     ports:
@@ -258,7 +258,7 @@ services:
         condition: service_healthy
 
   review-service:
-    build: ./review-service
+    build: ../backend/review-service
     container_name: autocare-review
     restart: unless-stopped
     ports:
@@ -286,7 +286,7 @@ services:
         condition: service_healthy
 
   admin-service:
-    build: ./admin-service
+    build: ../backend/admin-service
     container_name: autocare-admin
     restart: unless-stopped
     ports:
@@ -310,7 +310,7 @@ services:
         condition: service_healthy
 
   api-gateway:
-    build: ./api-gateway
+    build: ../backend/api-gateway
     container_name: autocare-gateway
     restart: unless-stopped
     ports:
@@ -328,6 +328,18 @@ services:
       start_period: 40s
     depends_on:
       eureka-server:
+        condition: service_healthy
+
+  # ===================== FRONTEND =====================
+
+  frontend:
+    build: ../frontend
+    container_name: autocare-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      api-gateway:
         condition: service_healthy
 
 volumes:

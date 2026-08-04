@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.autocare</groupId>
+    <artifactId>autocare-backend</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>AutoCare Backend (Aggregator)</name>
+    <description>
+        Aggregator POM for all AutoCare microservices.
+        Build everything with: mvn clean package -f backend/pom.xml
+    </description>
+
+    <modules>
+        <!-- Service Registry -->
+        <module>eureka-server</module>
+        <!-- Edge Layer -->
+        <module>api-gateway</module>
+        <!-- Core Services -->
+        <module>user-service</module>
+        <module>vehicle-service</module>
+        <module>mechanic-service</module>
+        <module>booking-service</module>
+        <module>notification-service</module>
+        <module>spareparts-service</module>
+        <module>payment-service</module>
+        <module>review-service</module>
+        <!-- Aggregation / Admin -->
+        <module>admin-service</module>
+    </modules>
+
+</project>
