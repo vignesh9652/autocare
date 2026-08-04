@@ -1,14 +1,17 @@
 import { api } from './client';
-import type { AuthResponse, LoginRequest, RegisterRequest } from '@/types';
+import type { AuthResponse, RegisterRequest } from '@/types';
 
-/** POST /api/auth/register */
-export async function register(payload: RegisterRequest): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/api/auth/register', payload);
-  return data;
+/** POST /api/auth/register — create a new account. */
+export async function registerUser(data: RegisterRequest): Promise<AuthResponse> {
+  const { data: response } = await api.post<AuthResponse>('/api/auth/register', data);
+  return response;
 }
 
-/** POST /api/auth/login */
-export async function login(payload: LoginRequest): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/api/auth/login', payload);
-  return data;
+/** POST /api/auth/login — exchange credentials for a JWT. */
+export async function loginUser(email: string, password: string): Promise<AuthResponse> {
+  const { data: response } = await api.post<AuthResponse>('/api/auth/login', {
+    email,
+    password,
+  });
+  return response;
 }

@@ -4,15 +4,9 @@ server:
 spring:
   application:
     name: api-gateway
-  autoconfigure:
-    exclude:
-      - org.springframework.cloud.gateway.config.GatewayHttpHeadersFilterAutoConfiguration
 
   cloud:
     gateway:
-      filter:
-        remove-hop-by-hop-headers:
-          enabled: false
       globalcors:
         cors-configurations:
           '[/**]':

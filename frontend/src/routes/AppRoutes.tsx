@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import HomePage from '@/pages/HomePage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
@@ -22,7 +22,15 @@ export default function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-      {/* Authenticated */}
+      {/* Authenticated — /dashboard is the post-login landing page (currently routes to /vehicles). */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Navigate to="/vehicles" replace />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/vehicles"
         element={

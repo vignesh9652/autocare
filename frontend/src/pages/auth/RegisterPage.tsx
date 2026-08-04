@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getApiErrorMessage } from '@/api/client';
-import { useAuth } from '@/context/AuthContext';
+import { registerUser } from '@/api/authApi';
 import { Button, Card, Input } from '@/components';
 
 interface FormState {
@@ -9,45 +9,75 @@ interface FormState {
   email: string;
   phone: string;
   password: string;
-  confirmPassword: string;
 }
 
-const EMPTY: FormState = { name: '', email: '', phone: '', password: '', confirmPassword: '' };
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
+const EMPTY: FormState = { name: '', email: '', phone: '', password: '' };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Phone is optional, but if provided it should look like one: digits, spaces,
+// dashes, parentheses and a leading +, between 7 and 15 characters.
+const PHONE_RE = /^\+?[0-9\s()-]{7,15}$/;
+
+function validate(form: FormState): FormErrors {
+  const errors: FormErrors = {};
+
+  if (!form.name.trim()) errors.name = 'Full name is required';
+  else if (form.name.trim().length < 2) errors.name = 'Name must be at least 2 characters';
+
+  if (!form.email.trim()) errors.email = 'Email is required';
+  else if (!EMAIL_RE.test(form.email.trim())) errors.email = 'Enter a valid email address';
+
+  if (form.phone.trim() && !PHONE_RE.test(form.phone.trim())) {
+    errors.phone = 'Enter a valid phone number';
+  }
+
+  if (!form.password) errors.password = 'Password is required';
+  else if (form.password.length < 8) errors.password = 'Password must be at least 8 characters';
+
+  return errors;
+}
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register, isLoading } = useAuth();
 
   const [form, setForm] = useState<FormState>(EMPTY);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    // Clear the inline error for the field being edited.
+    setErrors((prev) => (prev[name as keyof FormState] ? { ...prev, [name]: undefined } : prev));
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    setSubmitError('');
 
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+    const nextErrors = validate(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) return;
 
+    setIsSubmitting(true);
     try {
-      await register({
-        name: form.name,
-        email: form.email,
+      await registerUser({
+        name: form.name.trim(),
+        email: form.email.trim(),
         password: form.password,
-        phone: form.phone || undefined,
+        phone: form.phone.trim() || undefined,
       });
-      navigate('/vehicles', { replace: true });
+      navigate('/login', {
+        replace: true,
+        state: { success: 'Account created successfully — please sign in.' },
+      });
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Registration failed. Please try again.'));
+      setSubmitError(getApiErrorMessage(err, 'Registration failed. Please try again.'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -60,9 +90,12 @@ export default function RegisterPage() {
           <p className="mt-1 text-sm text-slate-400">Join AutoCare and book repairs online</p>
         </div>
 
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            {error}
+        {submitError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+          >
+            {submitError}
           </div>
         )}
 
@@ -71,9 +104,11 @@ export default function RegisterPage() {
             label="Full Name"
             name="name"
             required
+            autoComplete="name"
             value={form.name}
             onChange={handleChange}
             placeholder="Jane Doe"
+            error={errors.name}
           />
           <Input
             label="Email"
@@ -84,13 +119,17 @@ export default function RegisterPage() {
             value={form.email}
             onChange={handleChange}
             placeholder="you@example.com"
+            error={errors.email}
           />
           <Input
-            label="Phone"
+            label="Phone (optional)"
             name="phone"
+            type="tel"
+            autoComplete="tel"
             value={form.phone}
             onChange={handleChange}
             placeholder="9876543210"
+            error={errors.phone}
           />
           <Input
             label="Password"
@@ -100,21 +139,12 @@ export default function RegisterPage() {
             autoComplete="new-password"
             value={form.password}
             onChange={handleChange}
-            placeholder="At least 6 characters"
-            hint="Minimum 6 characters"
+            placeholder="At least 8 characters"
+            hint="Minimum 8 characters"
+            error={errors.password}
           />
-          <Input
-            label="Confirm Password"
-            name="confirmPassword"
-            type="password"
-            required
-            autoComplete="new-password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            placeholder="Repeat your password"
-          />
-          <Button type="submit" loading={isLoading} className="w-full">
-            {isLoading ? 'Creating account…' : 'Create Account'}
+          <Button type="submit" loading={isSubmitting} className="w-full">
+            {isSubmitting ? 'Creating account…' : 'Create Account'}
           </Button>
         </form>
 
