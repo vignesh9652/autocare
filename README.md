@@ -68,6 +68,8 @@ A Spring Boot microservices platform for managing vehicle repair bookings, built
 | **Notification Service** | 8085 | Consumes RabbitMQ events, simulates notifications | Spring AMQP, RabbitMQ |
 | **Payment Service** | 8086 | Payment initiation, gateway webhooks, payment status events | Spring Data JPA, MySQL, RabbitMQ |
 | **Spare Parts Service** | 8087 | Parts catalog, recommendations, stock management, ordering | Spring Data JPA, MySQL |
+| **Review Service** | 8088 | Reviews & ratings for mechanics and services | Spring Data JPA, MySQL |
+| **Admin Service** | 8089 | Aggregated dashboard across all services | WebClient, Spring Boot |
 
 ### Infrastructure
 
@@ -84,7 +86,7 @@ A Spring Boot microservices platform for managing vehicle repair bookings, built
 ### Prerequisites
 
 - **Java 21** ([Eclipse Temurin](https://adoptium.net/) recommended)
-- **Maven 3.9+** (or use the wrapper)
+- **Maven 3.9+**
 - **Docker Desktop** (for containerized MySQL + RabbitMQ)
 - **MySQL 8.0** (if running services locally without Docker)
 
@@ -92,7 +94,7 @@ A Spring Boot microservices platform for managing vehicle repair bookings, built
 
 ```bash
 # Start MySQL and RabbitMQ via Docker
-docker-compose up -d mysql rabbitmq
+docker compose -f docker/docker-compose.yml up -d mysql rabbitmq
 
 # Verify they're healthy:
 docker ps --filter "name=autocare-mysql" --filter "name=autocare-rabbitmq"
@@ -103,52 +105,53 @@ docker ps --filter "name=autocare-mysql" --filter "name=autocare-rabbitmq"
 ### 2. Build All Services
 
 ```bash
-# Build all services
-cd eureka-server && mvn clean package -DskipTests -q && cd ..
-cd user-service && mvn clean package -DskipTests -q && cd ..
-cd vehicle-service && mvn clean package -DskipTests -q && cd ..
-cd mechanic-service && mvn clean package -DskipTests -q && cd ..
-cd booking-service && mvn clean package -DskipTests -q && cd ..
-cd notification-service && mvn clean package -DskipTests -q && cd ..
-cd spareparts-service && mvn clean package -DskipTests -q && cd ..
-cd payment-service && mvn clean package -DskipTests -q && cd ..
-cd api-gateway && mvn clean package -DskipTests -q && cd ..
+# Build ALL services with one command (aggregator POM):
+mvn clean package -DskipTests -f backend/pom.xml
+
+# Or use the helper script (also builds the frontend):
+./scripts/build-all.sh
 
 # Or build just a single service:
-cd booking-service && mvn clean package -DskipTests -q && cd ..
+cd backend/booking-service && mvn clean package -DskipTests -q
 ```
 
 ### 3. Start All Services (Local)
 
-Open **9 separate terminal windows** and run in order:
+Open **11 separate terminal windows** and run in order:
 
 ```bash
 # Terminal 1: Eureka Server (port 8761)
-cd eureka-server && mvn spring-boot:run
+cd backend/eureka-server && mvn spring-boot:run
 
 # Terminal 2: User Service (port 8081) — wait for Eureka
-cd user-service && mvn spring-boot:run
+cd backend/user-service && mvn spring-boot:run
 
 # Terminal 3: Vehicle Service (port 8082)
-cd vehicle-service && mvn spring-boot:run
+cd backend/vehicle-service && mvn spring-boot:run
 
 # Terminal 4: Mechanic Service (port 8083)
-cd mechanic-service && mvn spring-boot:run
+cd backend/mechanic-service && mvn spring-boot:run
 
 # Terminal 5: Booking Service (port 8084)
-cd booking-service && mvn spring-boot:run
+cd backend/booking-service && mvn spring-boot:run
 
 # Terminal 6: Notification Service (port 8085)
-cd notification-service && mvn spring-boot:run
+cd backend/notification-service && mvn spring-boot:run
 
 # Terminal 7: Spare Parts Service (port 8087)
-cd spareparts-service && mvn spring-boot:run
+cd backend/spareparts-service && mvn spring-boot:run
 
 # Terminal 8: Payment Service (port 8086)
-cd payment-service && mvn spring-boot:run
+cd backend/payment-service && mvn spring-boot:run
 
-# Terminal 9: API Gateway (port 8080)
-cd api-gateway && mvn spring-boot:run
+# Terminal 9: Review Service (port 8088)
+cd backend/review-service && mvn spring-boot:run
+
+# Terminal 10: Admin Service (port 8089)
+cd backend/admin-service && mvn spring-boot:run
+
+# Terminal 11: API Gateway (port 8080)
+cd backend/api-gateway && mvn spring-boot:run
 ```
 
 > 💡 **Tip:** You can also use `mvn spring-boot:run -q` for quieter logs.
@@ -171,37 +174,43 @@ curl http://localhost:8087/actuator/health
 
 All should return `{"status":"UP"}`.
 
+### 5. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:3000 (proxies /api to the gateway)
+```
+
 ---
 
 ## Docker: Run EVERYTHING in Containers
 
-One command to build and start all 10 containers:
+All Docker orchestration lives in [`docker/`](docker/). One command to build and start all containers:
 
 ```bash
 # Build images & start all services (first run: ~5-10 min)
-docker-compose up --build
+docker compose -f docker/docker-compose.yml up --build
 
-# Or run in detached mode:
-docker-compose up --build -d
+# Or use the helper scripts:
+./scripts/dev-up.sh        # start everything detached
+./scripts/dev-down.sh      # stop everything
 
 # Follow logs of a specific service:
-docker-compose logs -f booking-service
+docker compose -f docker/docker-compose.yml logs -f booking-service
 
 # Check status of all containers:
-docker-compose ps
-
-# Stop everything:
-docker-compose down
+docker compose -f docker/docker-compose.yml ps
 
 # Stop and delete MySQL data:
-docker-compose down -v
+docker compose -f docker/docker-compose.yml down -v
 ```
 
 ### Docker Architecture
 
 | Container Name | Host:Port | Internal |
 |---------------|-----------|----------|
-| `autocare-mysql` | `localhost:3306` | `mysql:3306` |
+| `autocare-mysql` | `localhost:3307` | `mysql:3306` |
 | `autocare-rabbitmq` | `localhost:5672,15672` | `rabbitmq:5672` |
 | `autocare-eureka` | `localhost:8761` | `eureka-server:8761` |
 | `autocare-user` | `localhost:8081` | — |
@@ -212,8 +221,9 @@ docker-compose down -v
 | `autocare-spareparts` | `localhost:8087` | — |
 | `autocare-payment` | `localhost:8086` | — |
 | `autocare-gateway` | `localhost:8080` | — |
+| `autocare-frontend` | `localhost:3000` | `nginx:80` |
 
-> **Note:** Inside Docker, services connect to MySQL at `mysql:3306`, RabbitMQ at `rabbitmq:5672`, and Eureka at `http://eureka-server:8761/eureka`.
+> **Note:** Inside Docker, services connect to MySQL at `mysql:3306`, RabbitMQ at `rabbitmq:5672`, and Eureka at `http://eureka-server:8761/eureka`. The frontend nginx proxies `/api` to the `api-gateway` container.
 
 ---
 
@@ -443,19 +453,29 @@ All services share a common JWT secret for token validation:
 
 ```
 autocare/
-├── docker-compose.yml         # Orchestrates all containers
-├── init.sql                   # Database initialization script
-├── README.md                  # This file
+├── backend/                   # All Java microservices
+│   ├── pom.xml                # Aggregator POM — builds every service at once
+│   ├── eureka-server/         # Service registry (port 8761)
+│   ├── api-gateway/           # API Gateway (port 8080)
+│   ├── user-service/          # User auth service (port 8081)
+│   ├── vehicle-service/       # Vehicle management (port 8082)
+│   ├── mechanic-service/      # Mechanic profiles (port 8083)
+│   ├── booking-service/       # Booking management (port 8084)
+│   ├── notification-service/  # Event consumer (port 8085)
+│   ├── payment-service/       # Payment processing (port 8086)
+│   ├── spareparts-service/    # Spare parts catalog & recommendations (port 8087)
+│   ├── review-service/        # Reviews & ratings (port 8088)
+│   └── admin-service/         # Admin aggregation dashboard (port 8089)
 │
-├── eureka-server/             # Service registry (port 8761)
-├── api-gateway/               # API Gateway (port 8080)
-├── user-service/              # User auth service (port 8081)
-├── vehicle-service/           # Vehicle management (port 8082)
-├── mechanic-service/          # Mechanic profiles (port 8083)
-├── booking-service/           # Booking management (port 8084)
-├── notification-service/      # Event consumer (port 8085)
-├── spareparts-service/        # Spare parts catalog & recommendations (port 8087)
-└── payment-service/           # Payment processing (port 8086)
+├── frontend/                  # React 18 + Vite + TypeScript SPA (port 3000)
+├── docker/                    # Docker orchestration
+│   ├── docker-compose.yml     # Orchestrates all containers
+│   └── init.sql               # Database initialization script
+├── docs/                      # Documentation & Postman collection
+├── scripts/                   # Helper scripts (build-all, dev-up, dev-down)
+├── .github/                   # CI/CD workflows
+├── README.md                  # This file
+└── LICENSE
 ```
 
 ---
@@ -503,9 +523,9 @@ curl http://localhost:<port>/actuator/health
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| Service can't connect to MySQL | MySQL not running | `docker-compose up -d mysql` |
+| Service can't connect to MySQL | MySQL not running | `docker compose -f docker/docker-compose.yml up -d mysql` |
 | Service can't register with Eureka | Eureka not started yet | Wait — Spring retries automatically |
 | Booking creation fails with "No available mechanic found" | No mechanics in the database | Create a mechanic first via `/api/mechanics` |
-| RabbitMQ events not appearing | RabbitMQ not running | `docker-compose up -d rabbitmq` |
+| RabbitMQ events not appearing | RabbitMQ not running | `docker compose -f docker/docker-compose.yml up -d rabbitmq` |
 | Port conflict on 3306 | Local MySQL is running | Stop local MySQL, or change Docker port mapping |
 | eureka-server: `Connection refused` | Eureka not healthy yet | Spring Boot's Eureka client retries; wait ~30s |
