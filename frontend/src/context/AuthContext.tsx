@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { clearAuthStorage, getToken, setToken, USER_KEY } from '@/api/client';
-import { login as loginApi, register as registerApi } from '@/api/authApi';
+import { loginUser, registerUser } from '@/api/authApi';
 import type { AuthResponse, RegisterRequest, Role } from '@/types';
 
 /** Decoded from the JWT payload — mirrors the backend JwtUtil claims. */
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       setIsLoading(true);
       try {
-        const auth = await loginApi({ email, password });
+        const auth = await loginUser(email, password);
         persistSession(auth, email);
       } finally {
         setIsLoading(false);
@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (data: RegisterRequest) => {
       setIsLoading(true);
       try {
-        const auth = await registerApi(data);
+        const auth = await registerUser(data);
         persistSession(auth, data.email);
       } finally {
         setIsLoading(false);

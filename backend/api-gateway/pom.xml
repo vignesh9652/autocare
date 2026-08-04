@@ -8,7 +8,11 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.0</version>
+        <!-- 3.3.1+ (Spring Framework 6.1.10+) is required: Spring Cloud Gateway 4.1.9's
+             RemoveHopByHopHeadersFilter calls HttpHeaders.headerSet(), which does not
+             exist in Spring Framework 6.1.8 (shipped with Boot 3.3.0). Without it every
+             routed request dies with NoSuchMethodError and the browser sees a network error. -->
+        <version>3.3.13</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
