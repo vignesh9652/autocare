@@ -3,17 +3,17 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/mechanic_db_test?createDatabaseIfNotExist=true
-    username: root
-    password: Vignesh@2004
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:h2:mem:mechanic_db_test;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
 
   jpa:
     hibernate:
       ddl-auto: create-drop
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
 
 eureka:
   client:

@@ -217,7 +217,9 @@ class MechanicControllerTest {
 
     @Test
     void anyEndpoint_WithoutAuth_ShouldReturn403() throws Exception {
-        mockMvc.perform(get("/api/mechanics"))
+        // GET /api/mechanics is a public listing endpoint (permitAll),
+        // so test a protected endpoint instead.
+        mockMvc.perform(get("/api/mechanics/{id}", mechanicId))
                 .andExpect(status().isForbidden());
     }
 }

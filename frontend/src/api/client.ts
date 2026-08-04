@@ -1,4 +1,10 @@
+import axios, { AxiosError, type AxiosInstance } from 'axios';
+
 const TOKEN_KEY = 'autocare_token';
+
+/* ------------------------------------------------------------------ */
+/* Token storage                                                       */
+/* ------------------------------------------------------------------ */
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -12,47 +18,59 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-interface RequestOptions extends Omit<RequestInit, 'body'> {
-  body?: unknown;
-}
+/* ------------------------------------------------------------------ */
+/* Single configured Axios instance                                    */
+/* ------------------------------------------------------------------ */
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = {
+export const api: AxiosInstance = axios.create({
+  // The Spring Cloud API Gateway exposes every backend service under /api/**
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  headers: {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> | undefined),
-  };
+  },
+});
 
+// Attach the JWT (from localStorage) as a Bearer token on every request.
+api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
+});
 
-  const res = await fetch(`/api${path}`, {
-    ...options,
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  });
+// On a 401 response, drop the invalid token and bounce to /login.
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      clearToken();
+      // Avoid a redirect loop when we are already on the login page.
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  },
+);
 
-  if (res.status === 401) {
-    clearToken();
-    window.location.href = '/login';
-    throw new Error('Unauthorized');
-  }
+/* ------------------------------------------------------------------ */
+/* Helpers to read errors from Spring's error body                    */
+/* ------------------------------------------------------------------ */
 
-  if (!res.ok) {
-    const errorBody = await res.text();
-    throw new Error(errorBody || `Request failed with status ${res.status}`);
-  }
-
-  if (res.status === 204) {
-    return undefined as T;
-  }
-  return res.json() as Promise<T>;
+interface ErrorBody {
+  error?: string;
+  message?: string;
+  status?: number;
 }
 
-export const api = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body }),
-  put: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body }),
-  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
-};
+/** Extract a human-readable message from an Axios error. */
+export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as ErrorBody | undefined;
+    if (data?.message) return data.message;
+    if (data?.error) return data.error;
+    if (error.message) return error.message;
+  }
+  return fallback;
+}
