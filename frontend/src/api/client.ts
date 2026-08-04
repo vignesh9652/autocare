@@ -1,9 +1,10 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
 
-const TOKEN_KEY = 'autocare_token';
+export const TOKEN_KEY = 'autocare_token';
+export const USER_KEY = 'autocare_user';
 
 /* ------------------------------------------------------------------ */
-/* Token storage                                                       */
+/* Auth storage helpers                                                */
 /* ------------------------------------------------------------------ */
 
 export function getToken(): string | null {
@@ -14,8 +15,10 @@ export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
 }
 
-export function clearToken(): void {
+/** Remove every auth-related key from localStorage. */
+export function clearAuthStorage(): void {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
 }
 
 /* ------------------------------------------------------------------ */
@@ -44,7 +47,7 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      clearToken();
+      clearAuthStorage();
       // Avoid a redirect loop when we are already on the login page.
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

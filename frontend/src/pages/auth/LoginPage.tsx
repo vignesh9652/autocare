@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { login as loginApi } from '@/api/authApi';
 import { getApiErrorMessage } from '@/api/client';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Card, Input } from '@/components';
@@ -8,27 +7,22 @@ import { Button, Card, Input } from '@/components';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, isLoading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const from = (location.state as { from?: string } | null)?.from || '/vehicles';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
     try {
-      const auth = await loginApi({ email, password });
-      login(auth);
+      await login(email, password);
       navigate(from, { replace: true });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Invalid email or password'));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -66,8 +60,8 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
           />
-          <Button type="submit" loading={loading} className="w-full">
-            {loading ? 'Signing in…' : 'Sign In'}
+          <Button type="submit" loading={isLoading} className="w-full">
+            {isLoading ? 'Signing in…' : 'Sign In'}
           </Button>
         </form>
 
