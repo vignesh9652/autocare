@@ -25,6 +25,9 @@ const EMPTY: FormState = {
   vehicleType: 'SEDAN',
 };
 
+// Mirrors the backend rule: letters, numbers, spaces and hyphens only.
+const REGISTRATION_PATTERN = /^[A-Za-z0-9\s-]+$/;
+
 /** Add (no :id) or edit (:id) a vehicle. Redirects to /vehicles on success. */
 export default function VehicleForm() {
   const { id } = useParams<{ id: string }>();
@@ -70,6 +73,11 @@ export default function VehicleForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const registration = form.registrationNumber.trim().toUpperCase();
+    if (!REGISTRATION_PATTERN.test(registration) || registration.length > 30) {
+      setError('Registration number must contain only letters, numbers, spaces and hyphens (e.g. KA-01 AB 1234).');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -77,7 +85,7 @@ export default function VehicleForm() {
         make: form.make.trim(),
         model: form.model.trim(),
         year: Number(form.year),
-        registrationNumber: form.registrationNumber.trim(),
+        registrationNumber: registration,
         vehicleType: form.vehicleType,
       };
       if (isEditing) {
@@ -104,20 +112,20 @@ export default function VehicleForm() {
   return (
     <div className="container-page flex justify-center py-10">
       <Card className="w-full max-w-lg p-8">
-        <Link to="/vehicles" className="text-sm text-brand-400 hover:text-brand-300">
+        <Link to="/vehicles" className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
           ← Back to vehicles
         </Link>
         <div className="mt-3 mb-6">
-          <h1 className="text-2xl font-bold text-slate-100">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             {isEditing ? 'Edit Vehicle' : 'Add Vehicle'}
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {isEditing ? 'Update the details below and save.' : 'Register a vehicle to your account.'}
           </p>
         </div>
 
         {error && (
-          <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div role="alert" className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
             {error}
           </div>
         )}

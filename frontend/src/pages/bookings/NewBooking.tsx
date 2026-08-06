@@ -149,35 +149,35 @@ export default function NewBooking() {
       <div className="container-page flex justify-center py-16">
         <Card className="w-full max-w-lg p-8 text-center">
           <p className="text-5xl" aria-hidden>🎉</p>
-          <h1 className="mt-3 text-2xl font-bold text-slate-100">Booking Confirmed!</h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Booking <span className="font-semibold text-slate-200">#{created.id}</span> ·{' '}
+          <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-slate-100">Booking Confirmed!</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Booking <span className="font-semibold text-slate-800 dark:text-slate-200">#{created.id}</span> ·{' '}
             {created.serviceType}
           </p>
 
-          <div className="mt-6 rounded-xl border border-slate-700/60 bg-slate-900/50 p-4 text-left">
+          <div className="mt-6 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-900/50 p-4 text-left">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wide text-slate-500">Your mechanic</span>
               <StatusBadge status={created.status} />
             </div>
             {mechanic === 'loading' ? (
-              <div className="mt-2 flex items-center gap-2 text-sm text-slate-400">
+              <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                 <Spinner size="sm" /> Fetching mechanic…
               </div>
             ) : mechanic ? (
               <div className="mt-2 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600/20 font-bold text-brand-300">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600/20 font-bold text-brand-600 dark:text-brand-300">
                   {mechanic.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-100">{mechanic.name}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">{mechanic.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {mechanic.skills.join(', ')} · {mechanic.serviceArea}
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 A mechanic will be assigned to your booking shortly.
               </p>
             )}
@@ -204,8 +204,8 @@ export default function NewBooking() {
   return (
     <div className="container-page flex justify-center py-10">
       <Card className="w-full max-w-xl p-8">
-        <h1 className="text-2xl font-bold text-slate-100">New Booking</h1>
-        <p className="mt-1 text-sm text-slate-400">Schedule a repair — we assign the right mechanic</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">New Booking</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Schedule a repair — we assign the right mechanic</p>
 
         {/* Step indicator */}
         <ol className="mt-6 flex items-center gap-2">
@@ -218,18 +218,18 @@ export default function NewBooking() {
                 <span
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
                     done
-                      ? 'bg-emerald-500/20 text-emerald-400'
+                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
                       : active
                         ? 'bg-brand-600 text-white'
-                        : 'bg-slate-800 text-slate-500'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                   }`}
                 >
                   {done ? '✓' : n}
                 </span>
-                <span className={`hidden text-xs sm:block ${active ? 'font-semibold text-slate-200' : 'text-slate-500'}`}>
+                <span className={`hidden text-xs sm:block ${active ? 'font-semibold text-slate-800 dark:text-slate-200' : 'text-slate-500'}`}>
                   {label}
                 </span>
-                {n < STEPS.length && <span className="h-px flex-1 bg-slate-700" aria-hidden />}
+                {n < STEPS.length && <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" aria-hidden />}
               </li>
             );
           })}
@@ -240,8 +240,8 @@ export default function NewBooking() {
             role="alert"
             className={`mt-5 rounded-lg border px-4 py-3 text-sm ${
               isNoMechanicError(error)
-                ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
-                : 'border-red-500/30 bg-red-500/10 text-red-400'
+                ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                : 'border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400'
             }`}
           >
             {error}
@@ -255,8 +255,8 @@ export default function NewBooking() {
               {vehiclesLoading ? (
                 <Spinner size="sm" className="py-6" />
               ) : vehicles.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-700 p-6 text-center">
-                  <p className="text-sm text-slate-400">You need at least one vehicle to book.</p>
+                <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 p-6 text-center">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">You need at least one vehicle to book.</p>
                   <Button
                     variant="secondary"
                     size="sm"
@@ -352,14 +352,14 @@ export default function NewBooking() {
 
           {step === 4 && (
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Review your booking
               </h2>
-              <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-4">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-900/50 p-4">
                 <dl className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Vehicle</dt>
-                    <dd className="font-medium text-slate-200">
+                    <dd className="font-medium text-slate-800 dark:text-slate-200">
                       {selectedVehicle
                         ? `${selectedVehicle.make} ${selectedVehicle.model} · ${selectedVehicle.registrationNumber}`
                         : `#${form.vehicleId}`}
@@ -367,25 +367,25 @@ export default function NewBooking() {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Service</dt>
-                    <dd className="font-medium text-slate-200">{form.serviceType}</dd>
+                    <dd className="font-medium text-slate-800 dark:text-slate-200">{form.serviceType}</dd>
                   </div>
                   {form.preferredSkill && (
                     <div className="flex justify-between">
                       <dt className="text-slate-500">Required skill</dt>
-                      <dd className="font-medium text-slate-200">{form.preferredSkill}</dd>
+                      <dd className="font-medium text-slate-800 dark:text-slate-200">{form.preferredSkill}</dd>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Scheduled</dt>
-                    <dd className="font-medium text-slate-200">{formatDateTime(form.scheduledAt)}</dd>
+                    <dd className="font-medium text-slate-800 dark:text-slate-200">{formatDateTime(form.scheduledAt)}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Address</dt>
-                    <dd className="max-w-[60%] text-right font-medium text-slate-200">{form.address}</dd>
+                    <dd className="max-w-[60%] text-right font-medium text-slate-800 dark:text-slate-200">{form.address}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Area PIN</dt>
-                    <dd className="font-medium text-slate-200">{form.serviceArea}</dd>
+                    <dd className="font-medium text-slate-800 dark:text-slate-200">{form.serviceArea}</dd>
                   </div>
                 </dl>
               </div>

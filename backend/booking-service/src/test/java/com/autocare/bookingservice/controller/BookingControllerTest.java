@@ -169,7 +169,7 @@ class BookingControllerTest {
                 "Oil Change", BookingStatus.ACCEPTED,
                 LocalDateTime.of(2026, 8, 1, 10, 0),
                 "123 Main St", null, LocalDateTime.now());
-        when(bookingService.updateBookingStatus(eq(bookingId), eq(BookingStatus.ACCEPTED), eq(userId)))
+        when(bookingService.updateBookingStatus(eq(bookingId), eq(BookingStatus.ACCEPTED), eq(userId), eq("CUSTOMER")))
                 .thenReturn(updated);
 
         BookingStatusUpdateRequest statusReq = new BookingStatusUpdateRequest();
@@ -185,7 +185,7 @@ class BookingControllerTest {
 
     @Test
     void updateBookingStatus_WithInvalidTransition_ShouldReturn400() throws Exception {
-        when(bookingService.updateBookingStatus(eq(bookingId), eq(BookingStatus.IN_PROGRESS), eq(userId)))
+        when(bookingService.updateBookingStatus(eq(bookingId), eq(BookingStatus.IN_PROGRESS), eq(userId), eq("CUSTOMER")))
                 .thenThrow(new InvalidStatusTransitionException(
                         "Cannot transition from PENDING to IN_PROGRESS"));
 
@@ -210,6 +210,20 @@ class BookingControllerTest {
                         .content(objectMapper.writeValueAsString(statusReq)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Validation failed"));
+    }
+
+    // ─── GET /api/bookings/mechanic/assigned ───────────────────────────
+
+    @Test
+    void getMechanicBookings_ShouldReturn200() throws Exception {
+        when(bookingService.getMechanicBookings(userId))
+                .thenReturn(List.of(createSampleResponse()));
+
+        mockMvc.perform(get("/api/bookings/mechanic/assigned")
+                        .with(authentication(auth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()").value(1))
+                .andExpect(jsonPath("$[0].serviceType").value("Oil Change"));
     }
 
     // ─── UNAUTHENTICATED ───────────────────────────────────────────────

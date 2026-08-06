@@ -54,7 +54,10 @@ export default function BookingDetail() {
   const [cancelling, setCancelling] = useState(false);
   const [decisionBusy, setDecisionBusy] = useState<number | null>(null);
 
-  const terminal = booking?.status === 'COMPLETED' || booking?.status === 'CANCELLED';
+  const terminal =
+    booking?.status === 'COMPLETED' ||
+    booking?.status === 'CANCELLED' ||
+    booking?.status === 'REJECTED';
 
   /* ------------------------------ Data load ----------------------------- */
   // Cancellation guard so an in-flight load can't clobber state after the
@@ -208,10 +211,10 @@ export default function BookingDetail() {
   if (error && !booking) {
     return (
       <div className="container-page py-16">
-        <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div role="alert" className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
-        <Link to="/bookings" className="mt-4 inline-block text-sm text-brand-400 hover:text-brand-300">
+        <Link to="/bookings" className="mt-4 inline-block text-sm text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
           ← Back to bookings
         </Link>
       </div>
@@ -226,17 +229,17 @@ export default function BookingDetail() {
 
   return (
     <div className="container-page py-10">
-      <Link to="/bookings" className="text-sm text-brand-400 hover:text-brand-300">
+      <Link to="/bookings" className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
         ← Back to bookings
       </Link>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="flex items-center gap-3 text-2xl font-bold text-slate-100">
+          <h1 className="flex items-center gap-3 text-2xl font-bold text-slate-900 dark:text-slate-100">
             {booking.serviceType}
             <span className="text-lg font-normal text-slate-500">#{booking.id}</span>
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Scheduled {formatDateTime(booking.scheduledAt)} · Created {formatDateTime(booking.createdAt)}
           </p>
         </div>
@@ -244,15 +247,15 @@ export default function BookingDetail() {
       </div>
 
       {error && (
-        <div role="alert" className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div role="alert" className="mt-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
 
       {/* Status stepper */}
       {isCancelled ? (
-        <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-900/50 p-5 text-sm text-slate-400">
-          This booking was <span className="font-semibold text-slate-300">cancelled</span> and is no
+        <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-900/50 p-5 text-sm text-slate-500 dark:text-slate-400">
+          This booking was <span className="font-semibold text-slate-700 dark:text-slate-300">cancelled</span> and is no
           longer active.
         </div>
       ) : (
@@ -266,17 +269,17 @@ export default function BookingDetail() {
                   <span
                     className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
                       done
-                        ? 'bg-emerald-500/20 text-emerald-400'
+                        ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
                         : active
                           ? 'bg-brand-600 text-white ring-2 ring-brand-400/40'
-                          : 'bg-slate-800 text-slate-500'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                     }`}
                   >
                     {done ? '✓' : i + 1}
                   </span>
                   <span
                     className={`text-[10px] uppercase tracking-wide ${
-                      active ? 'font-semibold text-slate-200' : 'text-slate-500'
+                      active ? 'font-semibold text-slate-800 dark:text-slate-200' : 'text-slate-500'
                     }`}
                   >
                     {status.replace('_', ' ')}
@@ -284,7 +287,7 @@ export default function BookingDetail() {
                 </div>
                 {i < STATUS_STEPS.length - 1 && (
                   <span
-                    className={`h-0.5 flex-1 rounded ${done ? 'bg-emerald-500/40' : 'bg-slate-700'}`}
+                    className={`h-0.5 flex-1 rounded ${done ? 'bg-emerald-500/40' : 'bg-slate-200 dark:bg-slate-700'}`}
                     aria-hidden
                   />
                 )}
@@ -302,7 +305,7 @@ export default function BookingDetail() {
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs uppercase tracking-wide text-slate-500">Vehicle</dt>
-                <dd className="mt-0.5 font-medium text-slate-200">
+                <dd className="mt-0.5 font-medium text-slate-800 dark:text-slate-200">
                   {vehicle
                     ? `${vehicle.make} ${vehicle.model} (${vehicle.year})`
                     : `Vehicle #${booking.vehicleId}`}
@@ -310,17 +313,17 @@ export default function BookingDetail() {
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-slate-500">Registration</dt>
-                <dd className="mt-0.5 font-medium text-slate-200">
+                <dd className="mt-0.5 font-medium text-slate-800 dark:text-slate-200">
                   {vehicle?.registrationNumber ?? '—'}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-slate-500">Address</dt>
-                <dd className="mt-0.5 font-medium text-slate-200">{booking.address}</dd>
+                <dd className="mt-0.5 font-medium text-slate-800 dark:text-slate-200">{booking.address}</dd>
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-slate-500">Estimated cost</dt>
-                <dd className="mt-0.5 font-bold text-accent-400">
+                <dd className="mt-0.5 font-bold text-emerald-600 dark:text-accent-400">
                   {formatCurrency(booking.estimatedCost)}
                 </dd>
               </div>
@@ -333,17 +336,17 @@ export default function BookingDetail() {
               <Spinner size="sm" className="py-4" />
             ) : mechanic ? (
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-600/20 text-lg font-bold text-brand-300">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-600/20 text-lg font-bold text-brand-600 dark:text-brand-300">
                   {mechanic.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-100">{mechanic.name}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">{mechanic.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {mechanic.skills.join(', ')} · 📍 {mechanic.serviceArea}
                   </p>
-                  <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-400">
+                  <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                     <Stars value={mechanic.averageRating ?? 0} size="sm" />
-                    <span className="font-semibold text-slate-300">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
                       {formatRating(mechanic.averageRating)}
                     </span>
                     · {mechanic.totalJobsCompleted} jobs
@@ -351,7 +354,7 @@ export default function BookingDetail() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 No mechanic assigned yet{booking.status === 'PENDING' ? ' — one will be assigned shortly.' : '.'}
               </p>
             )}
@@ -363,7 +366,7 @@ export default function BookingDetail() {
             subtitle="Recommended by your mechanic while the job is in progress"
           >
             {recommendations.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
                 No spare part recommendations yet.
               </p>
             ) : (
@@ -386,18 +389,18 @@ export default function BookingDetail() {
           {/* Payment */}
           <Card title="Payment">
             {booking.estimatedCost == null ? (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 The estimated cost hasn't been set yet. Check back after your mechanic reviews the job.
               </p>
             ) : hasSuccessfulPayment ? (
-              <div className="flex items-center gap-2 text-sm text-emerald-400">
+              <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
                 <span aria-hidden>✅</span> Payment completed for {formatCurrency(booking.estimatedCost)}
               </div>
             ) : (
               <>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   Estimated cost:{' '}
-                  <span className="font-bold text-accent-400">{formatCurrency(booking.estimatedCost)}</span>
+                  <span className="font-bold text-emerald-600 dark:text-accent-400">{formatCurrency(booking.estimatedCost)}</span>
                 </p>
                 <Link to={`/payments/${booking.id}/checkout`} className="mt-4 block">
                   <Button className="w-full">Pay Now</Button>
@@ -416,7 +419,7 @@ export default function BookingDetail() {
               ) : (
                 <>
                   {reviewError && (
-                    <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+                    <p className="mb-3 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                       {reviewError}
                     </p>
                   )}
@@ -463,9 +466,9 @@ export default function BookingDetail() {
           </>
         }
       >
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-slate-700 dark:text-slate-300">
           This will cancel booking{' '}
-          <span className="font-semibold text-slate-100">#{booking.id}</span> ({booking.serviceType}).
+          <span className="font-semibold text-slate-900 dark:text-slate-100">#{booking.id}</span> ({booking.serviceType}).
           This cannot be undone.
         </p>
       </Modal>

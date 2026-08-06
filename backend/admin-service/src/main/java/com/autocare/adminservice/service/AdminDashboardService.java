@@ -71,10 +71,18 @@ public class AdminDashboardService {
         DashboardResponse dashboard = new DashboardResponse();
         List<String> unavailable = new ArrayList<>();
 
-        // ── Total users ────────────────────────────────────────────────────
+        // ── Total users + customers + pending mechanic approvals ────────────
         ServiceResult<List<Map<String, Object>>> users = userServiceClient.getUsers(authHeader);
         if (users.isAvailable()) {
-            dashboard.setTotalUsers(users.getData().size());
+            List<Map<String, Object>> userList = users.getData();
+            dashboard.setTotalUsers(userList.size());
+            dashboard.setTotalCustomers(userList.stream()
+                    .filter(u -> "CUSTOMER".equals(String.valueOf(u.get("role"))))
+                    .count());
+            dashboard.setPendingMechanicApprovals(userList.stream()
+                    .filter(u -> "MECHANIC".equals(String.valueOf(u.get("role")))
+                            && "PENDING".equals(String.valueOf(u.get("status"))))
+                    .count());
         } else {
             unavailable.add("user-service");
         }
@@ -136,6 +144,30 @@ public class AdminDashboardService {
     }
 
     // ── Proxy endpoints used by AdminController ────────────────────────────
+
+    public List<Map<String, Object>> getPendingMechanics(String authHeader) {
+        ServiceResult<List<Map<String, Object>>> result = userServiceClient.getPendingMechanics(authHeader);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("user-service is temporarily unavailable");
+        }
+        return result.getData();
+    }
+
+    public Map<String, Object> approveMechanic(Long id, String authHeader) {
+        ServiceResult<Map<String, Object>> result = userServiceClient.approveMechanic(id, authHeader);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("user-service is temporarily unavailable");
+        }
+        return result.getData();
+    }
+
+    public Map<String, Object> rejectMechanic(Long id, String authHeader) {
+        ServiceResult<Map<String, Object>> result = userServiceClient.rejectMechanic(id, authHeader);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("user-service is temporarily unavailable");
+        }
+        return result.getData();
+    }
 
     public List<Map<String, Object>> getAllBookings(String authHeader) {
         ServiceResult<List<Map<String, Object>>> result = bookingServiceClient.getAllBookings(authHeader);

@@ -3,6 +3,7 @@ package com.autocare.bookingservice.client;
 import com.autocare.bookingservice.exception.NoAvailableMechanicException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.Arrays;
 import java.util.List;
@@ -53,5 +54,33 @@ public class MechanicServiceClient {
 
         Map firstMechanic = mechanics.get(0);
         return ((Number) firstMechanic.get("id")).longValue();
+    }
+
+    /**
+     * Resolves the mechanic profile id for a user account (the mechanic's JWT
+     * subject). Returns {@code null} only when the account has no linked
+     * profile (404). Any other failure (e.g. mechanic-service unreachable) is
+     * propagated so callers surface a real error instead of silently showing
+     * an empty job list.
+     *
+     * @param userId the mechanic's user account id
+     * @return the mechanic profile id, or null if none exists
+     */
+    public Long getMechanicIdByUserId(Long userId) {
+        try {
+            Map response = webClientBuilder.build()
+                    .get()
+                    .uri("lb://MECHANIC-SERVICE/api/mechanics/by-user/{userId}", userId)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            if (response == null || response.get("id") == null) {
+                return null;
+            }
+            return ((Number) response.get("id")).longValue();
+        } catch (WebClientResponseException.NotFound e) {
+            // No mechanic profile linked to this account yet.
+            return null;
+        }
     }
 }

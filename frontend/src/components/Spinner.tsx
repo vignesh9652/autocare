@@ -17,7 +17,7 @@ export default function Spinner({ size = 'md', label, className = '' }: SpinnerP
         aria-hidden
         className={`${SIZE_CLASSES[size]} animate-spin rounded-full border-brand-500 border-t-transparent`}
       />
-      {label && <span className="text-sm text-slate-400">{label}</span>}
+      {label && <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>}
     </div>
   );
 }

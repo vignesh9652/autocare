@@ -7,6 +7,7 @@ import com.autocare.adminservice.service.AdminDashboardService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,6 +53,36 @@ public class AdminController {
     @GetMapping("/mechanics")
     public ResponseEntity<List<Map<String, Object>>> mechanics() {
         return ResponseEntity.ok(adminDashboardService.getAllMechanics());
+    }
+
+    /**
+     * Lists mechanic accounts that are waiting for admin approval
+     * (user-service).
+     */
+    @GetMapping("/mechanics/pending")
+    public ResponseEntity<List<Map<String, Object>>> pendingMechanics(
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.getPendingMechanics(authHeader));
+    }
+
+    /**
+     * Approves a pending mechanic registration.
+     */
+    @PutMapping("/mechanics/{id}/approve")
+    public ResponseEntity<Map<String, Object>> approveMechanic(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.approveMechanic(id, authHeader));
+    }
+
+    /**
+     * Rejects a pending mechanic registration.
+     */
+    @PutMapping("/mechanics/{id}/reject")
+    public ResponseEntity<Map<String, Object>> rejectMechanic(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.rejectMechanic(id, authHeader));
     }
 
     /**

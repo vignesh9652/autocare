@@ -48,7 +48,7 @@ class MechanicControllerTest {
     private MechanicResponse createSampleResponse() {
         return new MechanicResponse(mechanicId, "John Mechanic", "9876543210",
                 "mechanic@test.com", List.of("ENGINE", "BRAKES"), "560001",
-                AvailabilityStatus.AVAILABLE, 0.0, 0);
+                null, null, AvailabilityStatus.AVAILABLE, 0.0, 0);
     }
 
     private MechanicRequest createSampleRequest() {
@@ -153,7 +153,7 @@ class MechanicControllerTest {
     void updateMechanic_ShouldReturn200() throws Exception {
         MechanicResponse updated = new MechanicResponse(mechanicId, "John Updated", "9000000000",
                 "mechanic@test.com", List.of("ENGINE"), "560002",
-                AvailabilityStatus.AVAILABLE, 0.0, 0);
+                null, null, AvailabilityStatus.AVAILABLE, 0.0, 0);
         when(mechanicService.updateMechanic(eq(mechanicId), any(UpdateMechanicRequest.class)))
                 .thenReturn(updated);
 
@@ -175,7 +175,7 @@ class MechanicControllerTest {
     void updateAvailability_ShouldReturn200() throws Exception {
         MechanicResponse busyResponse = new MechanicResponse(mechanicId, "John Mechanic",
                 "9876543210", "mechanic@test.com", List.of("ENGINE", "BRAKES"), "560001",
-                AvailabilityStatus.BUSY, 0.0, 0);
+                null, null, AvailabilityStatus.BUSY, 0.0, 0);
         when(mechanicService.updateAvailability(eq(mechanicId), eq(userId),
                 any(AvailabilityUpdateRequest.class)))
                 .thenReturn(busyResponse);
@@ -197,7 +197,7 @@ class MechanicControllerTest {
     void updateRating_ShouldReturn200() throws Exception {
         MechanicResponse ratedResponse = new MechanicResponse(mechanicId, "John Mechanic",
                 "9876543210", "mechanic@test.com", List.of("ENGINE", "BRAKES"), "560001",
-                AvailabilityStatus.AVAILABLE, 4.5, 1);
+                null, null, AvailabilityStatus.AVAILABLE, 4.5, 1);
         when(mechanicService.updateRating(eq(mechanicId), any(RatingUpdateRequest.class)))
                 .thenReturn(ratedResponse);
 
@@ -211,6 +211,19 @@ class MechanicControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.averageRating").value(4.5))
                 .andExpect(jsonPath("$.totalJobsCompleted").value(1));
+    }
+
+    // ─── GET /api/mechanics/by-user/{userId} ─────────────────────────────
+
+    @Test
+    void getMechanicByUserId_ShouldReturn200() throws Exception {
+        when(mechanicService.getMechanicByUserId(userId))
+                .thenReturn(createSampleResponse());
+
+        mockMvc.perform(get("/api/mechanics/by-user/{userId}", userId)
+                        .with(authentication(auth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(mechanicId));
     }
 
     // ─── UNAUTHENTICATED ────────────────────────────────────────────────

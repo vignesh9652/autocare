@@ -32,14 +32,14 @@ export default function ReviewsPage() {
   return (
     <div className="container-page py-10">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-100">Reviews</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Reviews</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           See what customers say about each mechanic — leave yours from a completed booking
         </p>
       </div>
 
       {error && (
-        <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div role="alert" className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -48,7 +48,7 @@ export default function ReviewsPage() {
         <Spinner label="Loading mechanics…" className="py-20" />
       ) : mechanics.length === 0 ? (
         <Card className="py-16 text-center">
-          <p className="text-slate-400">No mechanics available yet.</p>
+          <p className="text-slate-500 dark:text-slate-400">No mechanics available yet.</p>
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
@@ -63,7 +63,7 @@ export default function ReviewsPage() {
                     className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
                       selectedId === m.id
                         ? 'bg-brand-600/20 text-brand-200'
-                        : 'text-slate-300 hover:bg-slate-800'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
                     {m.name}

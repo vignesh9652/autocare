@@ -35,6 +35,8 @@ public class MechanicService {
                 request.getSkills(),
                 request.getServiceArea()
         );
+        mechanic.setLatitude(request.getLatitude());
+        mechanic.setLongitude(request.getLongitude());
 
         mechanic = mechanicRepository.save(mechanic);
         return toResponse(mechanic);
@@ -88,6 +90,13 @@ public class MechanicService {
         return toResponse(mechanic);
     }
 
+    public MechanicResponse getMechanicByUserId(Long userId) {
+        Mechanic mechanic = mechanicRepository.findByUserId(userId)
+                .orElseThrow(() -> new MechanicNotFoundException(
+                        "No mechanic profile linked to user id: " + userId));
+        return toResponse(mechanic);
+    }
+
     public MechanicResponse updateMechanic(Long id, UpdateMechanicRequest request) {
         Mechanic mechanic = mechanicRepository.findById(id)
                 .orElseThrow(() -> new MechanicNotFoundException("Mechanic not found with id: " + id));
@@ -112,6 +121,12 @@ public class MechanicService {
         }
         if (request.getServiceArea() != null) {
             mechanic.setServiceArea(request.getServiceArea());
+        }
+        if (request.getLatitude() != null) {
+            mechanic.setLatitude(request.getLatitude());
+        }
+        if (request.getLongitude() != null) {
+            mechanic.setLongitude(request.getLongitude());
         }
 
         mechanic = mechanicRepository.save(mechanic);
@@ -156,6 +171,8 @@ public class MechanicService {
                 mechanic.getEmail(),
                 mechanic.getSkills(),
                 mechanic.getServiceArea(),
+                mechanic.getLatitude(),
+                mechanic.getLongitude(),
                 mechanic.getAvailabilityStatus(),
                 mechanic.getAverageRating(),
                 mechanic.getTotalJobsCompleted()

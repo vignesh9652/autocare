@@ -15,6 +15,12 @@ spring:
             allowedOrigins:
               - "http://localhost:3000"
               - "http://localhost:5173"
+            # The dev server may land on any local port (e.g. 3001 when 3000 is
+            # already taken by the nginx container), so also allow every
+            # localhost / 127.0.0.1 origin via patterns.
+            allowedOriginPatterns:
+              - "http://localhost:*"
+              - "http://127.0.0.1:*"
             allowedMethods:
               - "*"
             allowedHeaders:
@@ -29,6 +35,12 @@ spring:
           uri: lb://USER-SERVICE
           predicates:
             - Path=/api/auth/**
+
+        # User Service - user management (admin-only endpoints, e.g. /api/users/admin/**)
+        - id: user-service-users
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/users/**
 
         # Vehicle Service
         - id: vehicle-service

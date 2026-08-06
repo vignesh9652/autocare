@@ -88,17 +88,33 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Bookings assigned to the mechanic account identified by {@code userId}.
+     * Resolves the mechanic profile via mechanic-service; returns an empty
+     * list when the account has no linked profile.
+     */
+    public List<BookingResponse> getMechanicBookings(Long userId) {
+        Long mechanicId = mechanicServiceClient.getMechanicIdByUserId(userId);
+        if (mechanicId == null) {
+            return List.of();
+        }
+        return bookingRepository.findByMechanicIdOrderByCreatedAtDesc(mechanicId)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public BookingResponse getBookingById(Long id, Long userId) {
         Booking booking = findBookingByIdAndOwnershipCheck(id, userId);
         return toResponse(booking);
     }
 
-    public BookingResponse updateBookingStatus(Long id, BookingStatus newStatus, Long userId) {
+    public BookingResponse updateBookingStatus(Long id, BookingStatus newStatus, Long userId, String role) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + id));
 
-        // Validate status transition
-        validateStatusTransition(booking.getStatus(), newStatus);
+        // Role-based authorization before any state change.
+        authorizeStatusUpdate(booking, newStatus, userId, role);
 
         booking.setStatus(newStatus);
         booking = bookingRepository.save(booking);
@@ -132,19 +148,62 @@ public class BookingService {
         return booking;
     }
 
+    /**
+     * Enforces role-based rules on status changes:
+     * <ul>
+     *   <li><b>ADMIN</b> — may set any status on any booking.</li>
+     *   <li><b>MECHANIC</b> — may only touch bookings assigned to them, driving
+     *       the job lifecycle: accept / reject / start / complete.</li>
+     *   <li><b>CUSTOMER</b> — may only cancel their own booking.</li>
+     * </ul>
+     */
+    private void authorizeStatusUpdate(Booking booking, BookingStatus newStatus, Long userId, String role) {
+        if ("ADMIN".equals(role)) {
+            return;
+        }
+
+        if ("MECHANIC".equals(role)) {
+            Long mechanicId = mechanicServiceClient.getMechanicIdByUserId(userId);
+            if (mechanicId == null || !mechanicId.equals(booking.getMechanicId())) {
+                throw new BookingNotOwnedException("This booking is not assigned to you");
+            }
+            boolean valid = switch (booking.getStatus()) {
+                case PENDING -> newStatus == BookingStatus.ACCEPTED || newStatus == BookingStatus.REJECTED;
+                case ACCEPTED -> newStatus == BookingStatus.IN_PROGRESS;
+                case IN_PROGRESS -> newStatus == BookingStatus.COMPLETED;
+                case COMPLETED, CANCELLED, REJECTED -> false;
+            };
+            if (!valid) {
+                throw new InvalidStatusTransitionException(
+                        "Mechanic cannot transition from " + booking.getStatus() + " to " + newStatus);
+            }
+            return;
+        }
+
+        // Customer
+        if (!booking.getUserId().equals(userId)) {
+            throw new BookingNotOwnedException("This booking does not belong to you");
+        }
+        if (newStatus != BookingStatus.CANCELLED) {
+            throw new InvalidStatusTransitionException("Customers can only cancel their bookings");
+        }
+        validateStatusTransition(booking.getStatus(), newStatus);
+    }
+
     private void validateStatusTransition(BookingStatus current, BookingStatus next) {
         // Valid transitions:
-        // PENDING -> ACCEPTED, CANCELLED
+        // PENDING -> ACCEPTED, REJECTED, CANCELLED
         // ACCEPTED -> IN_PROGRESS, CANCELLED
         // IN_PROGRESS -> COMPLETED
-        // COMPLETED -> (terminal, no transitions)
-        // CANCELLED -> (terminal, no transitions)
+        // COMPLETED / REJECTED / CANCELLED -> (terminal, no transitions)
 
         boolean valid = switch (current) {
-            case PENDING -> next == BookingStatus.ACCEPTED || next == BookingStatus.CANCELLED;
+            case PENDING -> next == BookingStatus.ACCEPTED
+                    || next == BookingStatus.REJECTED
+                    || next == BookingStatus.CANCELLED;
             case ACCEPTED -> next == BookingStatus.IN_PROGRESS || next == BookingStatus.CANCELLED;
             case IN_PROGRESS -> next == BookingStatus.COMPLETED;
-            case COMPLETED, CANCELLED -> false;
+            case COMPLETED, CANCELLED, REJECTED -> false;
         };
 
         if (!valid) {

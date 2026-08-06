@@ -21,7 +21,7 @@ export default function Stars({ value, size = 'md', className = '' }: StarsProps
       <span className="text-amber-400" aria-hidden>
         {'★'.repeat(Math.max(0, Math.min(5, rounded)))}
       </span>
-      <span className="text-slate-600" aria-hidden>
+      <span className="text-slate-300 dark:text-slate-600" aria-hidden>
         {'★'.repeat(Math.max(0, 5 - rounded))}
       </span>
     </span>

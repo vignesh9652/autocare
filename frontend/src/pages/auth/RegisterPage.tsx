@@ -86,14 +86,14 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md p-8 animate-slide-up">
         <div className="mb-6 text-center">
           <span className="text-3xl" aria-hidden>🚗</span>
-          <h1 className="mt-2 text-2xl font-bold text-slate-100">Create your account</h1>
-          <p className="mt-1 text-sm text-slate-400">Join AutoCare and book repairs online</p>
+          <h1 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">Create your account</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Join AutoCare and book repairs online</p>
         </div>
 
         {submitError && (
           <div
             role="alert"
-            className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+            className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400"
           >
             {submitError}
           </div>
@@ -148,12 +148,23 @@ export default function RegisterPage() {
           </Button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-slate-400">
+        <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
           Already registered?{' '}
-          <Link to="/login" className="font-semibold text-brand-400 hover:text-brand-300">
+          <Link to="/login" className="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
             Sign in
           </Link>
         </p>
+
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+          <span className="font-semibold">Are you a mechanic?</span> Register through the{' '}
+          <Link
+            to="/register/mechanic"
+            className="font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+          >
+            mechanic application page
+          </Link>{' '}
+          — accounts are activated after admin approval.
+        </div>
       </Card>
     </div>
   );

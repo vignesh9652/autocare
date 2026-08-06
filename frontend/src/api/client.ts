@@ -26,8 +26,11 @@ export function clearAuthStorage(): void {
 /* ------------------------------------------------------------------ */
 
 export const api: AxiosInstance = axios.create({
-  // The Spring Cloud API Gateway exposes every backend service under /api/**
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  // API modules call the gateway with explicit paths (e.g. '/api/auth/login'),
+  // so the baseURL must be empty by default (same-origin: proxied by Vite in
+  // dev and by nginx in the Docker image). Set VITE_API_BASE_URL to a full
+  // origin (e.g. http://localhost:8080) to call the gateway directly.
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   headers: {
     'Content-Type': 'application/json',
   },

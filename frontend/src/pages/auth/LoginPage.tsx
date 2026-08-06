@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { getApiErrorMessage } from '@/api/client';
 import { Button, Card, Input } from '@/components';
 
 interface FormState {
@@ -68,8 +69,10 @@ export default function LoginPage() {
     try {
       await login(form.email.trim(), form.password);
       navigate(from, { replace: true });
-    } catch {
-      setFormError('Invalid email or password');
+    } catch (error) {
+      // Surface the real cause (e.g. "Network Error" when the gateway is
+      // unreachable) instead of masking it as bad credentials.
+      setFormError(getApiErrorMessage(error, 'Invalid email or password'));
     }
   };
 
@@ -78,14 +81,14 @@ export default function LoginPage() {
       <Card className="w-full max-w-md p-8 animate-slide-up">
         <div className="mb-6 text-center">
           <span className="text-3xl" aria-hidden>🚗</span>
-          <h1 className="mt-2 text-2xl font-bold text-slate-100">Welcome back</h1>
-          <p className="mt-1 text-sm text-slate-400">Sign in to manage your AutoCare services</p>
+          <h1 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">Welcome back</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Sign in to manage your AutoCare services</p>
         </div>
 
         {success && (
           <div
             role="status"
-            className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400"
+            className="mb-4 rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400"
           >
             {success}
           </div>
@@ -94,7 +97,7 @@ export default function LoginPage() {
         {formError && (
           <div
             role="alert"
-            className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+            className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400"
           >
             {formError}
           </div>
@@ -128,12 +131,24 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-slate-400">
+        <p className="mt-5 text-center text-sm text-slate-500 dark:text-slate-400">
           New here?{' '}
-          <Link to="/register" className="font-semibold text-brand-400 hover:text-brand-300">
+          <Link to="/register" className="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
             Create an account
+          </Link>{' '}
+          ·{' '}
+          <Link
+            to="/register/mechanic"
+            className="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300"
+          >
+            Apply as a mechanic
           </Link>
         </p>
+
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-center text-[11px] text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+          Admin demo login: <span className="font-semibold text-slate-700 dark:text-slate-300">admin@autocare.com</span> /{' '}
+          <span className="font-semibold text-slate-700 dark:text-slate-300">Admin@123</span>
+        </div>
       </Card>
     </div>
   );

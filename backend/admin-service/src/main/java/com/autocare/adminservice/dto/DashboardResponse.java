@@ -14,7 +14,9 @@ import java.util.Map;
 public class DashboardResponse {
 
     private long totalUsers;
+    private long totalCustomers;
     private long totalMechanics;
+    private long pendingMechanicApprovals;
     private long totalBookings;
 
     /** Booking status name (PENDING, ACCEPTED, ...) -> count. All statuses present, defaulting to 0. */
@@ -38,6 +40,22 @@ public class DashboardResponse {
 
     public void setTotalUsers(long totalUsers) {
         this.totalUsers = totalUsers;
+    }
+
+    public long getTotalCustomers() {
+        return totalCustomers;
+    }
+
+    public void setTotalCustomers(long totalCustomers) {
+        this.totalCustomers = totalCustomers;
+    }
+
+    public long getPendingMechanicApprovals() {
+        return pendingMechanicApprovals;
+    }
+
+    public void setPendingMechanicApprovals(long pendingMechanicApprovals) {
+        this.pendingMechanicApprovals = pendingMechanicApprovals;
     }
 
     public long getTotalMechanics() {
