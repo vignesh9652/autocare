@@ -51,7 +51,58 @@ public class UserServiceClient {
         return ServiceResult.of(users);
     }
 
+    /**
+     * Lists mechanic accounts still waiting for admin approval.
+     */
+    @CircuitBreaker(name = "userService", fallbackMethod = "getUsersFallback")
+    public ServiceResult<List<Map<String, Object>>> getPendingMechanics(String authHeader) {
+        List<Map<String, Object>> users = webClientBuilder.build()
+                .get()
+                .uri("lb://USER-SERVICE/api/users/admin/mechanics/pending")
+                .header("Authorization", authHeader)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<Map<String, Object>>>() {})
+                .defaultIfEmpty(Collections.emptyList())
+                .block();
+        return ServiceResult.of(users);
+    }
+
+    /**
+     * Approves a pending mechanic registration (unlocks login).
+     */
+    @CircuitBreaker(name = "userService", fallbackMethod = "mechanicActionFallback")
+    public ServiceResult<Map<String, Object>> approveMechanic(Long id, String authHeader) {
+        Map<String, Object> result = webClientBuilder.build()
+                .put()
+                .uri("lb://USER-SERVICE/api/users/admin/mechanics/{id}/approve", id)
+                .header("Authorization", authHeader)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .block();
+        return ServiceResult.of(result);
+    }
+
+    /**
+     * Rejects a pending mechanic registration (account stays blocked).
+     */
+    @CircuitBreaker(name = "userService", fallbackMethod = "mechanicActionFallback")
+    public ServiceResult<Map<String, Object>> rejectMechanic(Long id, String authHeader) {
+        Map<String, Object> result = webClientBuilder.build()
+                .put()
+                .uri("lb://USER-SERVICE/api/users/admin/mechanics/{id}/reject", id)
+                .header("Authorization", authHeader)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .block();
+        return ServiceResult.of(result);
+    }
+
     private ServiceResult<List<Map<String, Object>>> getUsersFallback(String authHeader, Throwable t) {
+        log.warn("⚠️ user-service unavailable (fallback): {}", String.valueOf(t));
+        return ServiceResult.unavailable();
+    }
+
+    private ServiceResult<Map<String, Object>> mechanicActionFallback(Long id, String authHeader, Throwable t) {
         log.warn("⚠️ user-service unavailable (fallback): {}", String.valueOf(t));
         return ServiceResult.unavailable();
     }

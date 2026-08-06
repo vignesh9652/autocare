@@ -25,7 +25,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {error ? (
           <p className="error-text mt-1">{error}</p>
         ) : hint ? (
-          <p className="mt-1 text-xs text-slate-500">{hint}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>
         ) : null}
       </div>
     );

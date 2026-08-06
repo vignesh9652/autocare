@@ -40,7 +40,7 @@ export default function ReviewsList({ mechanicId }: ReviewsListProps) {
 
   if (error) {
     return (
-      <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+      <p role="alert" className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
         {error}
       </p>
     );
@@ -48,7 +48,7 @@ export default function ReviewsList({ mechanicId }: ReviewsListProps) {
 
   if (reviews.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+      <p className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
         No reviews yet
       </p>
     );

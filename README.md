@@ -227,6 +227,36 @@ docker compose -f docker/docker-compose.yml down -v
 
 ---
 
+## Role-Based Access
+
+The platform has three roles, each with its own dashboard and permissions:
+
+| Role | Registration | Access |
+|------|--------------|--------|
+| **ADMIN** | No public registration — **predefined account** | Full platform overview: customers, mechanics, bookings, revenue, and mechanic approval queue |
+| **CUSTOMER** | Register on the Home page (instant login) | Vehicles, book services with nearby-mechanic search, booking status & history |
+| **MECHANIC** | Separate "Apply as a Mechanic" page | Accept/reject booking requests, update job status, view completed services |
+
+### Default Admin
+
+On first startup, `user-service` seeds a predefined admin account (configurable via `APP_ADMIN_EMAIL` / `APP_ADMIN_PASSWORD`):
+
+```
+email:    admin@autocare.com
+password: Admin@123
+```
+
+### Mechanic Approval Workflow
+
+1. A mechanic registers through the **Apply as a Mechanic** page (collects skills, service area, and workshop location).
+2. The account is created with `status = PENDING` — **login is blocked** until an admin approves it.
+3. The admin reviews the application on the **Admin Dashboard → Mechanics → Pending Approvals** and clicks **Approve** or **Reject**.
+4. Once approved, the mechanic can log in and toggle their availability to start receiving job requests.
+
+New mechanics start **offline** and only appear in customer search after going online.
+
+---
+
 ## API Endpoints
 
 ### User Service (`http://localhost:8081` or `/api/auth` via Gateway)
@@ -398,25 +428,30 @@ curl http://localhost:8080/api/recommendations ...
                     ┌──────────┐
                     │ PENDING  │
                     └────┬─────┘
-                    │         │
-               ┌────▼─┐  ┌───▼──────┐
-               │ACCEPTED│  │ CANCELLED │
-               └────▲──┘  └──────────┘
-                    │
-               ┌────▼────────┐
-               │ IN_PROGRESS │
-               └────▲────────┘
-                    │
-               ┌────▼──────┐
-               │ COMPLETED │
-               └───────────┘
+            ┌───────────┼───────────┐
+        ┌───▼──┐   ┌────▼────┐   ┌──▼───────┐
+        │ACCEPTED│   │ REJECTED │   │ CANCELLED │
+        └───▲──┘   └─────────┘   └──────────┘
+            │
+       ┌────▼────────┐
+       │ IN_PROGRESS │
+       └────▲────────┘
+            │
+       ┌────▼──────┐
+       │ COMPLETED │
+       └───────────┘
 ```
 
-Valid transitions:
-- `PENDING` → `ACCEPTED` | `CANCELLED`
+Valid transitions (enforced by role):
+- `PENDING` → `ACCEPTED` | `REJECTED` | `CANCELLED`
 - `ACCEPTED` → `IN_PROGRESS` | `CANCELLED`
 - `IN_PROGRESS` → `COMPLETED`
-- `COMPLETED` / `CANCELLED` → terminal (no further transitions)
+- `COMPLETED` / `REJECTED` / `CANCELLED` → terminal (no further transitions)
+
+Role rules for status changes:
+- **MECHANIC** — only bookings assigned to them: accept / reject / start / complete.
+- **CUSTOMER** — can only cancel their own booking.
+- **ADMIN** — can set any status from the admin bookings table.
 
 ---
 

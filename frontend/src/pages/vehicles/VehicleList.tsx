@@ -49,8 +49,8 @@ export default function VehicleList() {
     <div className="container-page py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">My Vehicles</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">My Vehicles</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Vehicles registered to your account — used when booking service
           </p>
         </div>
@@ -58,7 +58,7 @@ export default function VehicleList() {
       </div>
 
       {error && (
-        <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div role="alert" className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -66,13 +66,13 @@ export default function VehicleList() {
       {loading ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>
           {[0, 1, 2].map((i) => (
-            <div key={i} className="card h-44 animate-pulse bg-slate-800/50" />
+            <div key={i} className="card h-44 animate-pulse bg-slate-50/70 dark:bg-slate-800/50" />
           ))}
         </div>
       ) : vehicles.length === 0 ? (
         <Card className="py-16 text-center">
           <p className="text-4xl" aria-hidden>🚗</p>
-          <p className="mt-3 text-slate-400">No vehicles yet.</p>
+          <p className="mt-3 text-slate-500 dark:text-slate-400">No vehicles yet.</p>
           <p className="mt-1 text-sm text-slate-500">
             Add your first vehicle to start booking service.
           </p>
@@ -86,7 +86,7 @@ export default function VehicleList() {
             <Card key={v.id} hoverable className="flex flex-col">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-base font-semibold text-slate-100">
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                     {v.make} {v.model}
                   </h3>
                   <p className="mt-0.5 text-xs text-slate-500">Model {v.year}</p>
@@ -94,7 +94,7 @@ export default function VehicleList() {
                 <StatusBadge status={v.vehicleType} />
               </div>
 
-              <p className="mt-3 font-mono text-sm tracking-wide text-slate-300">
+              <p className="mt-3 font-mono text-sm tracking-wide text-slate-700 dark:text-slate-300">
                 {v.registrationNumber}
               </p>
 
@@ -136,9 +136,9 @@ export default function VehicleList() {
           </>
         }
       >
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-slate-700 dark:text-slate-300">
           Are you sure you want to delete{' '}
-          <span className="font-semibold text-slate-100">
+          <span className="font-semibold text-slate-900 dark:text-slate-100">
             {deleteTarget ? `${deleteTarget.make} ${deleteTarget.model}` : ''}
           </span>
           ? This cannot be undone.

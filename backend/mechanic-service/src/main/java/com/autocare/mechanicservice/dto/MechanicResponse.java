@@ -12,6 +12,8 @@ public class MechanicResponse {
     private String email;
     private List<String> skills;
     private String serviceArea;
+    private Double latitude;
+    private Double longitude;
     private AvailabilityStatus availabilityStatus;
     private Double averageRating;
     private Integer totalJobsCompleted;
@@ -20,6 +22,7 @@ public class MechanicResponse {
 
     public MechanicResponse(Long id, String name, String phone, String email,
                             List<String> skills, String serviceArea,
+                            Double latitude, Double longitude,
                             AvailabilityStatus availabilityStatus,
                             Double averageRating, Integer totalJobsCompleted) {
         this.id = id;
@@ -28,6 +31,8 @@ public class MechanicResponse {
         this.email = email;
         this.skills = skills;
         this.serviceArea = serviceArea;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.availabilityStatus = availabilityStatus;
         this.averageRating = averageRating;
         this.totalJobsCompleted = totalJobsCompleted;
@@ -79,6 +84,22 @@ public class MechanicResponse {
 
     public void setServiceArea(String serviceArea) {
         this.serviceArea = serviceArea;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 
     public AvailabilityStatus getAvailabilityStatus() {

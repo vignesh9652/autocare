@@ -26,6 +26,15 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    /**
+     * Account lifecycle gate. CUSTOMER/ADMIN accounts are APPROVED on
+     * creation; MECHANIC accounts start as PENDING until an admin approves
+     * (or rejects) them. Login is blocked while not APPROVED.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private AccountStatus status = AccountStatus.APPROVED;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -90,6 +99,14 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public AccountStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(AccountStatus status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

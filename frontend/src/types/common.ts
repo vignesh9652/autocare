@@ -18,7 +18,16 @@ export type VehicleType =
 
 export type AvailabilityStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
 
-export type BookingStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type BookingStatus =
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'REJECTED'
+  | 'CANCELLED';
+
+/** Account approval lifecycle (mechanics start as PENDING). */
+export type AccountStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type PaymentStatus = 'INITIATED' | 'SUCCESS' | 'FAILED';
 

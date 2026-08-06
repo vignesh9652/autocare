@@ -61,14 +61,14 @@ export default function ReviewForm({
               className="text-2xl transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
             >
               <span
-                className={value <= (hovered || rating) ? 'text-amber-400' : 'text-slate-600'}
+                className={value <= (hovered || rating) ? 'text-amber-700 dark:text-amber-400' : 'text-slate-600'}
                 aria-hidden
               >
                 ★
               </span>
             </button>
           ))}
-          <span className="ml-2 self-center text-sm text-slate-400">
+          <span className="ml-2 self-center text-sm text-slate-500 dark:text-slate-400">
             {rating > 0 ? `${rating}/5` : 'Tap to rate'}
           </span>
         </div>
@@ -89,7 +89,7 @@ export default function ReviewForm({
       </div>
 
       {error && (
-        <p role="alert" className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+        <p role="alert" className="mb-3 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">
           {error}
         </p>
       )}

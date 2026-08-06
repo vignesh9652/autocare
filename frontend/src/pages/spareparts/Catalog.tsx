@@ -83,8 +83,8 @@ export default function Catalog() {
   return (
     <div className="container-page py-10">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-100">Spare Parts Catalog</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Spare Parts Catalog</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Genuine parts with compatibility and DIY install guides
         </p>
       </div>
@@ -118,7 +118,7 @@ export default function Catalog() {
       </div>
 
       {error && (
-        <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div role="alert" className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -126,13 +126,13 @@ export default function Catalog() {
       {loading ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="card h-40 animate-pulse bg-slate-800/50" />
+            <div key={i} className="card h-40 animate-pulse bg-slate-50/70 dark:bg-slate-800/50" />
           ))}
         </div>
       ) : parts.length === 0 ? (
         <Card className="py-16 text-center">
           <p className="text-4xl" aria-hidden>🔩</p>
-          <p className="mt-3 text-slate-400">No parts found{search || category ? ' for your filters' : ''}.</p>
+          <p className="mt-3 text-slate-500 dark:text-slate-400">No parts found{search || category ? ' for your filters' : ''}.</p>
         </Card>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

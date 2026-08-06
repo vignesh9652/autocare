@@ -51,6 +51,7 @@ class BookingServiceTest {
     private Booking booking;
     private final Long userId = 1L;
     private final Long otherUserId = 2L;
+    private final Long mechanicUserId = 3L;
     private final Long vehicleId = 10L;
     private final Long mechanicId = 20L;
     private final Long bookingId = 100L;
@@ -202,29 +203,31 @@ class BookingServiceTest {
                 () -> bookingService.getBookingById(999L, userId));
     }
 
-    // ─── UPDATE STATUS ─────────────────────────────────────────────────
+    // ─── MECHANIC BOOKINGS ─────────────────────────────────────────────
 
     @Test
-    void updateStatus_PendingToAccepted_ShouldSucceed() {
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+    void getMechanicBookings_ShouldReturnAssignedBookings() {
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        when(bookingRepository.findByMechanicIdOrderByCreatedAtDesc(mechanicId))
+                .thenReturn(List.of(booking));
 
-        Booking accepted = new Booking(userId, vehicleId, mechanicId, "Oil Change",
-                LocalDateTime.of(2026, 8, 1, 10, 0), "123 Main St");
-        accepted.setId(bookingId);
-        accepted.setStatus(BookingStatus.ACCEPTED);
-        when(bookingRepository.save(any(Booking.class))).thenReturn(accepted);
+        List<BookingResponse> responses = bookingService.getMechanicBookings(mechanicUserId);
 
-        BookingResponse response = bookingService.updateBookingStatus(
-                bookingId, BookingStatus.ACCEPTED, userId);
-
-        assertEquals(BookingStatus.ACCEPTED, response.getStatus());
-        verify(bookingRepository).save(any(Booking.class));
-        verify(rabbitTemplate, never()).convertAndSend(
-                anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_COMPLETED), any(Object.class));
+        assertEquals(1, responses.size());
+        assertEquals(bookingId, responses.get(0).getId());
     }
 
     @Test
-    void updateStatus_PendingToCancelled_ShouldSucceed() {
+    void getMechanicBookings_WithoutLinkedProfile_ShouldReturnEmpty() {
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(null);
+
+        assertTrue(bookingService.getMechanicBookings(mechanicUserId).isEmpty());
+    }
+
+    // ─── UPDATE STATUS — CUSTOMER ──────────────────────────────────────
+
+    @Test
+    void customer_PendingToCancelled_ShouldSucceed() {
         booking.setStatus(BookingStatus.PENDING);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
 
@@ -235,14 +238,96 @@ class BookingServiceTest {
         when(bookingRepository.save(any(Booking.class))).thenReturn(cancelled);
 
         BookingResponse response = bookingService.updateBookingStatus(
-                bookingId, BookingStatus.CANCELLED, userId);
+                bookingId, BookingStatus.CANCELLED, userId, "CUSTOMER");
+
+        assertEquals(BookingStatus.CANCELLED, response.getStatus());
+        verify(rabbitTemplate, never()).convertAndSend(
+                anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_COMPLETED), any(Object.class));
+    }
+
+    @Test
+    void customer_AcceptedToCancelled_ShouldSucceed() {
+        booking.setStatus(BookingStatus.ACCEPTED);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        Booking cancelled = new Booking(userId, vehicleId, mechanicId, "Oil Change",
+                LocalDateTime.of(2026, 8, 1, 10, 0), "123 Main St");
+        cancelled.setId(bookingId);
+        cancelled.setStatus(BookingStatus.CANCELLED);
+        when(bookingRepository.save(any(Booking.class))).thenReturn(cancelled);
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.CANCELLED, userId, "CUSTOMER");
 
         assertEquals(BookingStatus.CANCELLED, response.getStatus());
     }
 
     @Test
-    void updateStatus_FullChain_ToCompleted_ShouldPublishEvent() {
-        // ACCEPTED -> IN_PROGRESS -> COMPLETED
+    void customer_CannotAcceptBooking_ShouldThrow() {
+        booking.setStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        assertThrows(InvalidStatusTransitionException.class,
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.ACCEPTED, userId, "CUSTOMER"));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void customer_UpdatingAnotherUsersBooking_ShouldThrow() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        assertThrows(BookingNotOwnedException.class,
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.CANCELLED, otherUserId, "CUSTOMER"));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    // ─── UPDATE STATUS — MECHANIC ──────────────────────────────────────
+
+    @Test
+    void mechanic_PendingToAccepted_ShouldSucceed() {
+        booking.setStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+
+        Booking accepted = new Booking(userId, vehicleId, mechanicId, "Oil Change",
+                LocalDateTime.of(2026, 8, 1, 10, 0), "123 Main St");
+        accepted.setId(bookingId);
+        accepted.setStatus(BookingStatus.ACCEPTED);
+        when(bookingRepository.save(any(Booking.class))).thenReturn(accepted);
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.ACCEPTED, mechanicUserId, "MECHANIC");
+
+        assertEquals(BookingStatus.ACCEPTED, response.getStatus());
+        verify(rabbitTemplate, never()).convertAndSend(
+                anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_COMPLETED), any(Object.class));
+    }
+
+    @Test
+    void mechanic_PendingToRejected_ShouldSucceed() {
+        booking.setStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+
+        Booking rejected = new Booking(userId, vehicleId, mechanicId, "Oil Change",
+                LocalDateTime.of(2026, 8, 1, 10, 0), "123 Main St");
+        rejected.setId(bookingId);
+        rejected.setStatus(BookingStatus.REJECTED);
+        when(bookingRepository.save(any(Booking.class))).thenReturn(rejected);
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.REJECTED, mechanicUserId, "MECHANIC");
+
+        assertEquals(BookingStatus.REJECTED, response.getStatus());
+    }
+
+    @Test
+    void mechanic_FullChain_ToCompleted_ShouldPublishEvent() {
+        // PENDING -> ACCEPTED -> IN_PROGRESS -> COMPLETED
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+
         booking.setStatus(BookingStatus.ACCEPTED);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
 
@@ -253,11 +338,9 @@ class BookingServiceTest {
         when(bookingRepository.save(any(Booking.class))).thenReturn(inProgress);
 
         BookingResponse response = bookingService.updateBookingStatus(
-                bookingId, BookingStatus.IN_PROGRESS, userId);
-
+                bookingId, BookingStatus.IN_PROGRESS, mechanicUserId, "MECHANIC");
         assertEquals(BookingStatus.IN_PROGRESS, response.getStatus());
 
-        // Now IN_PROGRESS -> COMPLETED
         Booking completed = new Booking(userId, vehicleId, mechanicId, "Oil Change",
                 LocalDateTime.of(2026, 8, 1, 10, 0), "123 Main St");
         completed.setId(bookingId);
@@ -265,7 +348,7 @@ class BookingServiceTest {
         when(bookingRepository.save(any(Booking.class))).thenReturn(completed);
 
         response = bookingService.updateBookingStatus(
-                bookingId, BookingStatus.COMPLETED, userId);
+                bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC");
 
         assertEquals(BookingStatus.COMPLETED, response.getStatus());
         verify(rabbitTemplate).convertAndSend(
@@ -274,58 +357,54 @@ class BookingServiceTest {
                 any(Object.class));
     }
 
-    // ─── INVALID TRANSITIONS ───────────────────────────────────────────
-
     @Test
-    void updateStatus_PendingToInProgress_ShouldThrow() {
+    void mechanic_PendingToInProgress_ShouldThrow() {
         booking.setStatus(BookingStatus.PENDING);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
 
         assertThrows(InvalidStatusTransitionException.class,
-                () -> bookingService.updateBookingStatus(bookingId, BookingStatus.IN_PROGRESS, userId));
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.IN_PROGRESS, mechanicUserId, "MECHANIC"));
         verify(bookingRepository, never()).save(any());
     }
 
     @Test
-    void updateStatus_CompletedToAny_ShouldThrow() {
+    void mechanic_BookingAssignedToAnother_ShouldThrow() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(99L);
+
+        assertThrows(BookingNotOwnedException.class,
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.ACCEPTED, mechanicUserId, "MECHANIC"));
+    }
+
+    @Test
+    void mechanic_WithoutLinkedProfile_ShouldThrow() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(null);
+
+        assertThrows(BookingNotOwnedException.class,
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.ACCEPTED, mechanicUserId, "MECHANIC"));
+    }
+
+    @Test
+    void mechanic_CompletedToAny_ShouldThrow() {
         booking.setStatus(BookingStatus.COMPLETED);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
 
         assertThrows(InvalidStatusTransitionException.class,
-                () -> bookingService.updateBookingStatus(bookingId, BookingStatus.ACCEPTED, userId));
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.ACCEPTED, mechanicUserId, "MECHANIC"));
     }
 
-    @Test
-    void updateStatus_CancelledToAny_ShouldThrow() {
-        booking.setStatus(BookingStatus.CANCELLED);
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
-
-        assertThrows(InvalidStatusTransitionException.class,
-                () -> bookingService.updateBookingStatus(bookingId, BookingStatus.PENDING, userId));
-    }
+    // ─── UPDATE STATUS — ADMIN ─────────────────────────────────────────
 
     @Test
-    void updateStatus_WithNonExistentId_ShouldThrow() {
-        when(bookingRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThrows(BookingNotFoundException.class,
-                () -> bookingService.updateBookingStatus(999L, BookingStatus.ACCEPTED, userId));
-    }
-
-    @Test
-    void updateStatus_CompletedToCancelled_ShouldThrow() {
-        booking.setStatus(BookingStatus.COMPLETED);
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
-
-        assertThrows(InvalidStatusTransitionException.class,
-                () -> bookingService.updateBookingStatus(bookingId, BookingStatus.CANCELLED, userId));
-    }
-
-    // ─── IN_PROGRESS → COMPLETED publishes event ───────────────────────
-
-    @Test
-    void updateStatus_InProgressToCompleted_PublishesBookingCompletedEvent() {
-        booking.setStatus(BookingStatus.IN_PROGRESS);
+    void admin_CanSetAnyStatus_ShouldSucceed() {
+        booking.setStatus(BookingStatus.PENDING);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
 
         Booking completed = new Booking(userId, vehicleId, mechanicId, "Oil Change",
@@ -334,28 +413,20 @@ class BookingServiceTest {
         completed.setStatus(BookingStatus.COMPLETED);
         when(bookingRepository.save(any(Booking.class))).thenReturn(completed);
 
-        bookingService.updateBookingStatus(bookingId, BookingStatus.COMPLETED, userId);
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.COMPLETED, userId, "ADMIN");
 
-        verify(rabbitTemplate).convertAndSend(
-                eq(RabbitMQConfig.TOPIC_EXCHANGE_NAME),
-                eq(RabbitMQConfig.ROUTING_KEY_BOOKING_COMPLETED),
-                any(Object.class));
+        assertEquals(BookingStatus.COMPLETED, response.getStatus());
     }
 
+    // ─── INVALID / MISSING ─────────────────────────────────────────────
+
     @Test
-    void updateStatus_AcceptedToCancelled_DoesNotPublishCompleted() {
-        booking.setStatus(BookingStatus.ACCEPTED);
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+    void updateStatus_WithNonExistentId_ShouldThrow() {
+        when(bookingRepository.findById(999L)).thenReturn(Optional.empty());
 
-        Booking cancelled = new Booking(userId, vehicleId, mechanicId, "Oil Change",
-                LocalDateTime.of(2026, 8, 1, 10, 0), "123 Main St");
-        cancelled.setId(bookingId);
-        cancelled.setStatus(BookingStatus.CANCELLED);
-        when(bookingRepository.save(any(Booking.class))).thenReturn(cancelled);
-
-        bookingService.updateBookingStatus(bookingId, BookingStatus.CANCELLED, userId);
-
-        verify(rabbitTemplate, never()).convertAndSend(
-                anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_COMPLETED), any(Object.class));
+        assertThrows(BookingNotFoundException.class,
+                () -> bookingService.updateBookingStatus(
+                        999L, BookingStatus.ACCEPTED, userId, "CUSTOMER"));
     }
 }

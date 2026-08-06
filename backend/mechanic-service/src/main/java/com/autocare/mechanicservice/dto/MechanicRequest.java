@@ -24,6 +24,10 @@ public class MechanicRequest {
     @NotBlank(message = "Service area is required")
     private String serviceArea;
 
+    /** Workshop coordinates (optional but recommended for nearby search). */
+    private Double latitude;
+    private Double longitude;
+
     public String getName() {
         return name;
     }
@@ -62,5 +66,21 @@ public class MechanicRequest {
 
     public void setServiceArea(String serviceArea) {
         this.serviceArea = serviceArea;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 }

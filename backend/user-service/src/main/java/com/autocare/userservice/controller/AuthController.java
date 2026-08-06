@@ -3,6 +3,7 @@ package com.autocare.userservice.controller;
 import com.autocare.userservice.dto.AuthResponse;
 import com.autocare.userservice.dto.LoginRequest;
 import com.autocare.userservice.dto.RegisterRequest;
+import com.autocare.userservice.entity.AccountStatus;
 import com.autocare.userservice.entity.Role;
 import com.autocare.userservice.entity.User;
 import com.autocare.userservice.repository.UserRepository;
@@ -39,13 +40,25 @@ public class AuthController {
                     .body(Map.of("error", "Email is already registered"));
         }
 
+        // Role-based registration: the public endpoint must never mint an ADMIN.
+        if (request.getRole() == Role.ADMIN) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "ADMIN accounts cannot be self-registered"));
+        }
+
         User user = new User(
                 request.getName(),
                 request.getEmail(),
                 passwordEncoder.encode(request.getPassword()),
                 request.getPhone(),
-                Role.CUSTOMER
+                request.getRole()
         );
+
+        // Mechanics require admin approval before they can log in.
+        if (request.getRole() == Role.MECHANIC) {
+            user.setStatus(AccountStatus.PENDING);
+        }
 
         user = userRepository.save(user);
 
@@ -70,6 +83,18 @@ public class AuthController {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Invalid email or password"));
+        }
+
+        // Role-based gate: only APPROVED accounts may log in. Mechanic
+        // registrations stay PENDING until an admin approves them; rejected
+        // accounts remain blocked.
+        if (user.getStatus() != null && user.getStatus() != AccountStatus.APPROVED) {
+            String message = user.getStatus() == AccountStatus.REJECTED
+                    ? "Your account was rejected by the AutoCare Administrator. Contact support for help."
+                    : "Your account is pending admin approval. You will be able to log in once the AutoCare Administrator approves your registration.";
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", message));
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole());

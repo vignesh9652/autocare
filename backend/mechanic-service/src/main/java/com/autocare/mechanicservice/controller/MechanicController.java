@@ -44,6 +44,16 @@ public class MechanicController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Resolves the mechanic profile linked to a user account. Used by
+     * booking-service to map a mechanic's JWT (userId) to their profile id.
+     */
+    @GetMapping("/by-user/{userId}")
+    public ResponseEntity<MechanicResponse> getMechanicByUserId(@PathVariable Long userId) {
+        MechanicResponse response = mechanicService.getMechanicByUserId(userId);
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<MechanicResponse> updateMechanic(
             @PathVariable Long id,

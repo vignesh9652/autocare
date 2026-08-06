@@ -2,6 +2,7 @@ package com.autocare.userservice.controller;
 
 import com.autocare.userservice.dto.LoginRequest;
 import com.autocare.userservice.dto.RegisterRequest;
+import com.autocare.userservice.entity.AccountStatus;
 import com.autocare.userservice.entity.Role;
 import com.autocare.userservice.entity.User;
 import com.autocare.userservice.repository.UserRepository;
@@ -125,6 +126,58 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("Invalid email or password"));
+    }
+
+    @Test
+    void register_AsMechanic_ShouldCreatePendingAccount() throws Exception {
+        RegisterRequest request = new RegisterRequest(
+                "Mech One", "mech@example.com", "password123", "1234567890", Role.MECHANIC);
+
+        when(userRepository.existsByEmail("mech@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("encoded-pass");
+
+        User savedUser = new User("Mech One", "mech@example.com", "encoded-pass", "1234567890", Role.MECHANIC);
+        savedUser.setStatus(AccountStatus.PENDING);
+        savedUser.setId(2L);
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        when(jwtUtil.generateToken(2L, "mech@example.com", Role.MECHANIC)).thenReturn("test-token");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("MECHANIC"));
+    }
+
+    @Test
+    void register_AsAdmin_ShouldReturn400() throws Exception {
+        RegisterRequest request = new RegisterRequest(
+                "Hacker", "admin@example.com", "password123", "1234567890", Role.ADMIN);
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("ADMIN accounts cannot be self-registered"));
+    }
+
+    @Test
+    void login_WithPendingMechanic_ShouldReturn403() throws Exception {
+        LoginRequest request = new LoginRequest("mech@example.com", "password123");
+
+        User user = new User("Mech One", "mech@example.com", "encoded-pass", "1234567890", Role.MECHANIC);
+        user.setStatus(AccountStatus.PENDING);
+        user.setId(2L);
+
+        when(userRepository.findByEmail("mech@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", "encoded-pass")).thenReturn(true);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").exists());
     }
 
     @Test

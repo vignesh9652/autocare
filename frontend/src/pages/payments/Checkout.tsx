@@ -125,7 +125,7 @@ export default function Checkout() {
   if (error && !booking) {
     return (
       <div className="container-page py-16">
-        <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div role="alert" className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       </div>
@@ -136,8 +136,8 @@ export default function Checkout() {
     return (
       <div className="container-page py-16">
         <Card className="py-16 text-center">
-          <p className="text-slate-400">This booking has no payable amount yet.</p>
-          <Link to={`/bookings/${bookingId}`} className="mt-4 inline-block text-sm text-brand-400 hover:text-brand-300">
+          <p className="text-slate-500 dark:text-slate-400">This booking has no payable amount yet.</p>
+          <Link to={`/bookings/${bookingId}`} className="mt-4 inline-block text-sm text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
             ← Back to booking
           </Link>
         </Card>
@@ -150,10 +150,10 @@ export default function Checkout() {
       <div className="container-page flex justify-center py-16">
         <Card className="w-full max-w-md p-8 text-center">
           <p className="text-5xl" aria-hidden>✅</p>
-          <h1 className="mt-3 text-2xl font-bold text-slate-100">Payment Successful</h1>
-          <p className="mt-2 text-sm text-slate-400">
+          <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-slate-100">Payment Successful</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {formatCurrency(payment?.amount ?? booking.estimatedCost)} paid for booking{' '}
-            <span className="font-semibold text-slate-200">#{booking.id}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">#{booking.id}</span>
           </p>
           <p className="mt-1 text-xs text-slate-500">
             Transaction {payment?.gatewayTransactionId}
@@ -176,10 +176,10 @@ export default function Checkout() {
       <div className="container-page flex justify-center py-16">
         <Card className="w-full max-w-md p-8 text-center">
           <p className="text-5xl" aria-hidden>❌</p>
-          <h1 className="mt-3 text-2xl font-bold text-slate-100">Payment Failed</h1>
-          <p className="mt-2 text-sm text-slate-400">
+          <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-slate-100">Payment Failed</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             The payment for booking{' '}
-            <span className="font-semibold text-slate-200">#{booking.id}</span> did not go through.
+            <span className="font-semibold text-slate-800 dark:text-slate-200">#{booking.id}</span> did not go through.
           </p>
           <div className="mt-6 space-y-2">
             <Button className="w-full" onClick={() => setPhase('idle')}>
@@ -198,18 +198,18 @@ export default function Checkout() {
   return (
     <div className="container-page flex justify-center py-10">
       <Card className="w-full max-w-md p-8">
-        <Link to={`/bookings/${booking.id}`} className="text-sm text-brand-400 hover:text-brand-300">
+        <Link to={`/bookings/${booking.id}`} className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
           ← Back to booking
         </Link>
-        <h1 className="mt-3 text-2xl font-bold text-slate-100">Checkout</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-slate-100">Checkout</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Booking #{booking.id} · {booking.serviceType}
         </p>
 
-        <div className="mt-5 rounded-xl border border-slate-700/60 bg-slate-900/50 p-4">
+        <div className="mt-5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-900/50 p-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-400">Amount due</span>
-            <span className="text-xl font-extrabold text-accent-400">
+            <span className="text-slate-500 dark:text-slate-400">Amount due</span>
+            <span className="text-xl font-extrabold text-emerald-600 dark:text-accent-400">
               {formatCurrency(booking.estimatedCost)}
             </span>
           </div>
@@ -226,7 +226,7 @@ export default function Checkout() {
               Waiting for the gateway to confirm{payment?.gatewayTransactionId ? ` (${payment.gatewayTransactionId})` : ''}
             </p>
             {gaveUp && (
-              <p className="mt-2 text-xs text-amber-400">
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
                 Taking longer than expected. Check your payment history, or use the dev simulate
                 button below.
               </p>
@@ -247,7 +247,7 @@ export default function Checkout() {
             </select>
 
             {error && (
-              <div role="alert" className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <div role="alert" className="mt-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                 {error}
               </div>
             )}
@@ -264,7 +264,7 @@ export default function Checkout() {
             type="button"
             onClick={handleSimulateWebhook}
             disabled={simulating}
-            className="mt-6 w-full rounded-xl border-2 border-dashed border-amber-500/50 bg-amber-500/10 px-4 py-3 text-xs font-semibold text-amber-300 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+            className="mt-6 w-full rounded-xl border-2 border-dashed border-amber-500/50 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-xs font-semibold text-amber-300 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
           >
             {simulating ? 'Simulating…' : '🧪 Simulate Webhook Success (dev only)'}
           </button>

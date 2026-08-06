@@ -1,4 +1,4 @@
-import type { Role } from './common';
+import type { AccountStatus, Role } from './common';
 
 /** POST /api/auth/login */
 export interface LoginRequest {
@@ -12,6 +12,8 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phone?: string;
+  /** Requested account role. Defaults to CUSTOMER; MECHANIC requires admin approval. */
+  role?: Role;
 }
 
 /** Response of both login and register (AuthResponse on the backend). */
@@ -29,5 +31,7 @@ export interface User {
   email: string;
   phone: string;
   role: Role;
+  /** Approval lifecycle — mechanics are PENDING until an admin approves them. */
+  status?: AccountStatus;
   createdAt: string;
 }

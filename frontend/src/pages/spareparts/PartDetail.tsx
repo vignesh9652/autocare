@@ -65,10 +65,10 @@ export default function PartDetail() {
   if (error || !part) {
     return (
       <div className="container-page py-16">
-        <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div role="alert" className="rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error || 'Part not found'}
         </div>
-        <Link to="/spare-parts" className="mt-4 inline-block text-sm text-brand-400 hover:text-brand-300">
+        <Link to="/spare-parts" className="mt-4 inline-block text-sm text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
           ← Back to catalog
         </Link>
       </div>
@@ -83,7 +83,7 @@ export default function PartDetail() {
 
   return (
     <div className="container-page py-10">
-      <Link to="/spare-parts" className="text-sm text-brand-400 hover:text-brand-300">
+      <Link to="/spare-parts" className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300">
         ← Back to catalog
       </Link>
 
@@ -92,9 +92,9 @@ export default function PartDetail() {
           <Card>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-slate-100">{part.name}</h1>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{part.name}</h1>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-brand-600/15 px-2.5 py-0.5 text-xs font-medium text-brand-300">
+                  <span className="rounded-full bg-brand-600/15 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:text-brand-300">
                     {part.category}
                   </span>
                   <StatusBadge status={lowStock ? 'LOW STOCK' : 'IN STOCK'} />
@@ -102,10 +102,10 @@ export default function PartDetail() {
               </div>
               <div className="text-right">
                 <div className="text-xs uppercase tracking-wide text-slate-500">Price</div>
-                <div className="text-2xl font-extrabold text-accent-400">
+                <div className="text-2xl font-extrabold text-emerald-600 dark:text-accent-400">
                   {formatCurrency(part.price)}
                 </div>
-                <div className={`text-xs font-medium ${lowStock ? 'text-red-400' : 'text-slate-400'}`}>
+                <div className={`text-xs font-medium ${lowStock ? 'text-red-700 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                   {part.stockQuantity === 0
                     ? 'Out of stock'
                     : `${part.stockQuantity} in stock`}
@@ -114,7 +114,7 @@ export default function PartDetail() {
             </div>
 
             {part.description && (
-              <p className="mt-4 text-sm leading-relaxed text-slate-300">{part.description}</p>
+              <p className="mt-4 text-sm leading-relaxed text-slate-700 dark:text-slate-300">{part.description}</p>
             )}
           </Card>
 
@@ -125,7 +125,7 @@ export default function PartDetail() {
               subtitle="Watch the official guide for this part"
               className="mt-6"
             >
-              <div className="aspect-video overflow-hidden rounded-xl border border-slate-700">
+              <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
                 <iframe
                   src={toEmbedUrl(part.tutorialVideoUrl)}
                   title={`${part.name} installation tutorial`}
@@ -147,10 +147,10 @@ export default function PartDetail() {
               <ol className="space-y-3">
                 {steps.map((step, i) => (
                   <li key={i} className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600/20 text-xs font-bold text-brand-300">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600/20 text-xs font-bold text-brand-600 dark:text-brand-300">
                       {i + 1}
                     </span>
-                    <p className="text-sm text-slate-300">{step}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{step}</p>
                   </li>
                 ))}
               </ol>
@@ -168,7 +168,7 @@ export default function PartDetail() {
                 {part.compatibleVehicleModels.map((m) => (
                   <span
                     key={m}
-                    className="rounded-full bg-slate-700/60 px-3 py-1 text-xs text-slate-200"
+                    className="rounded-full bg-slate-700/60 px-3 py-1 text-xs text-slate-800 dark:text-slate-200"
                   >
                     {m}
                   </span>

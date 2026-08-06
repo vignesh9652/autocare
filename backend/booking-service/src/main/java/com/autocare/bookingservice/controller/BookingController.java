@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,13 +60,31 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Bookings assigned to the logged-in mechanic (mechanic role). Resolves
+     * the mechanic profile from the JWT subject via mechanic-service.
+     */
+    @GetMapping("/mechanic/assigned")
+    public ResponseEntity<List<BookingResponse>> getMechanicBookings(
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        List<BookingResponse> bookings = bookingService.getMechanicBookings(userId);
+        return ResponseEntity.ok(bookings);
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<BookingResponse> updateBookingStatus(
             @PathVariable Long id,
             @Valid @RequestBody BookingStatusUpdateRequest request,
             Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
-        BookingResponse response = bookingService.updateBookingStatus(id, request.getStatus(), userId);
+        String role = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authority -> authority.startsWith("ROLE_"))
+                .map(authority -> authority.substring(5))
+                .findFirst()
+                .orElse("CUSTOMER");
+        BookingResponse response = bookingService.updateBookingStatus(id, request.getStatus(), userId, role);
         return ResponseEntity.ok(response);
     }
 }

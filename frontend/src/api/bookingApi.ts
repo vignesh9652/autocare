@@ -13,6 +13,12 @@ export async function getBookings(): Promise<Booking[]> {
   return data;
 }
 
+/** GET /api/bookings/mechanic/assigned — bookings assigned to the logged-in mechanic. */
+export async function getMechanicBookings(): Promise<Booking[]> {
+  const { data } = await api.get<Booking[]>('/api/bookings/mechanic/assigned');
+  return data;
+}
+
 /** GET /api/bookings/admin/all — all bookings (ADMIN role). */
 export async function getAllBookings(): Promise<Booking[]> {
   const { data } = await api.get<Booking[]>('/api/bookings/admin/all');

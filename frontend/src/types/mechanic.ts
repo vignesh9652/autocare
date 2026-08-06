@@ -7,6 +7,9 @@ export interface MechanicRequest {
   email: string;
   skills: string[];
   serviceArea: string;
+  /** Workshop coordinates — used by customers for nearby search. */
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 /** PUT /api/mechanics/{id} body — all fields optional (UpdateMechanicRequest). */
@@ -16,6 +19,8 @@ export interface MechanicUpdateRequest {
   email?: string;
   skills?: string[];
   serviceArea?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 /** PUT /api/mechanics/{id}/availability body. */
@@ -36,6 +41,8 @@ export interface Mechanic {
   email: string;
   skills: string[];
   serviceArea: string;
+  latitude: number | null;
+  longitude: number | null;
   availabilityStatus: AvailabilityStatus;
   averageRating: number | null;
   totalJobsCompleted: number;

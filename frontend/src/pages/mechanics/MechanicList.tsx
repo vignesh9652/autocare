@@ -83,8 +83,8 @@ export default function MechanicList() {
   return (
     <div className="container-page py-10">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-100">Find a Mechanic</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Find a Mechanic</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Browse vetted mechanics by skill and service area
         </p>
       </div>
@@ -118,7 +118,7 @@ export default function MechanicList() {
       </div>
 
       {error && (
-        <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div role="alert" className="mb-4 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -128,7 +128,7 @@ export default function MechanicList() {
       ) : mechanics.length === 0 ? (
         <Card className="py-16 text-center">
           <p className="text-4xl" aria-hidden>🔧</p>
-          <p className="mt-3 text-slate-400">No mechanics match your filters.</p>
+          <p className="mt-3 text-slate-500 dark:text-slate-400">No mechanics match your filters.</p>
           <p className="mt-1 text-sm text-slate-500">Try widening the skill or area.</p>
         </Card>
       ) : (
@@ -139,8 +139,8 @@ export default function MechanicList() {
         </div>
       )}
 
-      <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400">
-        <span className="font-semibold text-slate-300">ℹ️ How assignment works</span> — you don't
+      <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-500 dark:text-slate-400">
+        <span className="font-semibold text-slate-700 dark:text-slate-300">ℹ️ How assignment works</span> — you don't
         choose a mechanic here. When you create a booking, an available mechanic matching your
         service type, required skill and area is assigned automatically.
       </div>

@@ -1,6 +1,8 @@
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
-import Navbar from '@/components/Navbar';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { ToastProvider } from '@/components/ui/Toast';
+import { MarketplaceProvider } from '@/context/MarketplaceStore';
 import AppRoutes from '@/routes/AppRoutes';
 
 /**
@@ -8,23 +10,22 @@ import AppRoutes from '@/routes/AppRoutes';
  *
  * BrowserRouter wraps everything (AuthProvider must be inside the Router so
  * components can use both useAuth() and useNavigate()/useLocation()).
+ * ThemeProvider toggles the `dark` class on <html>; ToastProvider renders
+ * the global notification stack; MarketplaceProvider shares the spare-part
+ * cart and orders across the customer dashboard.
  */
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <div className="flex min-h-screen flex-col">
-          <Navbar />
-          <main className="flex-1">
-            <AppRoutes />
-          </main>
-          <footer className="py-8 text-center text-sm text-slate-500">
-            <div className="container-page">
-              AutoCare Microservices Platform © {new Date().getFullYear()}
-            </div>
-          </footer>
-        </div>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <MarketplaceProvider>
+              <AppRoutes />
+            </MarketplaceProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
