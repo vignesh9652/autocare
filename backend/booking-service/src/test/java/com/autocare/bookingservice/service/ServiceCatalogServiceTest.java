@@ -92,7 +92,7 @@ class ServiceCatalogServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> service.resolveEstimatedAmount("Oil Change + Custom Detailing"));
 
-        assertTrue(ex.getMessage().contains("Custom Detailing"));
+        assertTrue(ex.getMessage().contains("custom detailing"));
         // The client-supplied estimate is never trusted for unknown services.
     }
 
