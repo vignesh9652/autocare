@@ -3,13 +3,16 @@ package com.autocare.bookingservice.controller;
 import com.autocare.bookingservice.dto.BookingRequest;
 import com.autocare.bookingservice.dto.BookingResponse;
 import com.autocare.bookingservice.dto.BookingStatusUpdateRequest;
+import com.autocare.bookingservice.service.BookingEventPublisher;
 import com.autocare.bookingservice.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -18,9 +21,12 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final BookingEventPublisher eventPublisher;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService,
+                             BookingEventPublisher eventPublisher) {
         this.bookingService = bookingService;
+        this.eventPublisher = eventPublisher;
     }
 
     @PostMapping
@@ -86,5 +92,16 @@ public class BookingController {
                 .orElse("CUSTOMER");
         BookingResponse response = bookingService.updateBookingStatus(id, request.getStatus(), userId, role);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Live booking tracking via Server-Sent Events.
+     * Clients subscribe here and receive a {@code booking.status} event
+     * every time the booking's status changes (e.g. accepted, in progress,
+     * completed). Requires a valid JWT.
+     */
+    @GetMapping(value = "/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamBookingStatus(@PathVariable Long id, Authentication authentication) {
+        return eventPublisher.subscribe(id);
     }
 }

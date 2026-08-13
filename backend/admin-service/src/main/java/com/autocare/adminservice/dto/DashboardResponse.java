@@ -25,6 +25,24 @@ public class DashboardResponse {
     /** Sum of all SUCCESS payment amounts. */
     private BigDecimal totalRevenue;
 
+    /** Sum of finalAmount across PAID bookings (gross service revenue). */
+    private BigDecimal totalServiceRevenue;
+
+    /** Sum of AutoCare commission across PAID bookings. */
+    private BigDecimal platformCommission;
+
+    /** Sum of mechanicEarning across PAID bookings. */
+    private BigDecimal mechanicEarnings;
+
+    /** Successful payment transaction count. */
+    private long successfulPayments;
+
+    /** Initiated (pending) payment transaction count. */
+    private long pendingPayments;
+
+    /** Failed payment transaction count. */
+    private long failedPayments;
+
     /** Count of spare parts with stockQuantity &lt; 5. */
     private long lowStockPartsCount;
 
@@ -96,6 +114,54 @@ public class DashboardResponse {
 
     public void setLowStockPartsCount(long lowStockPartsCount) {
         this.lowStockPartsCount = lowStockPartsCount;
+    }
+
+    public BigDecimal getTotalServiceRevenue() {
+        return totalServiceRevenue;
+    }
+
+    public void setTotalServiceRevenue(BigDecimal totalServiceRevenue) {
+        this.totalServiceRevenue = totalServiceRevenue;
+    }
+
+    public BigDecimal getPlatformCommission() {
+        return platformCommission;
+    }
+
+    public void setPlatformCommission(BigDecimal platformCommission) {
+        this.platformCommission = platformCommission;
+    }
+
+    public BigDecimal getMechanicEarnings() {
+        return mechanicEarnings;
+    }
+
+    public void setMechanicEarnings(BigDecimal mechanicEarnings) {
+        this.mechanicEarnings = mechanicEarnings;
+    }
+
+    public long getSuccessfulPayments() {
+        return successfulPayments;
+    }
+
+    public void setSuccessfulPayments(long successfulPayments) {
+        this.successfulPayments = successfulPayments;
+    }
+
+    public long getPendingPayments() {
+        return pendingPayments;
+    }
+
+    public void setPendingPayments(long pendingPayments) {
+        this.pendingPayments = pendingPayments;
+    }
+
+    public long getFailedPayments() {
+        return failedPayments;
+    }
+
+    public void setFailedPayments(long failedPayments) {
+        this.failedPayments = failedPayments;
     }
 
     public List<String> getUnavailableServices() {

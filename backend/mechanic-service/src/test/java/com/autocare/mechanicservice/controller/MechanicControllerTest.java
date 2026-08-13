@@ -229,10 +229,13 @@ class MechanicControllerTest {
     // ─── UNAUTHENTICATED ────────────────────────────────────────────────
 
     @Test
-    void anyEndpoint_WithoutAuth_ShouldReturn403() throws Exception {
-        // GET /api/mechanics is a public listing endpoint (permitAll),
-        // so test a protected endpoint instead.
-        mockMvc.perform(get("/api/mechanics/{id}", mechanicId))
-                .andExpect(status().isForbidden());
+    void anyEndpoint_WithoutAuth_ShouldReturn401() throws Exception {
+        // GET /api/mechanics and GET /api/mechanics/{id} are public
+        // (permitAll), so test a protected endpoint instead — e.g. updating
+        // a mechanic's profile. Missing/invalid JWT → 401.
+        mockMvc.perform(put("/api/mechanics/{id}", mechanicId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
     }
 }

@@ -57,6 +57,27 @@ public class MechanicServiceClient {
     }
 
     /**
+     * Fetches a single mechanic profile by its id. Used to validate that a
+     * customer-chosen mechanic exists and is currently available before the
+     * booking is routed to them.
+     *
+     * @param id the mechanic profile id
+     * @return the mechanic payload (id, availabilityStatus, userId, …)
+     */
+    public Map getMechanicById(Long id) {
+        try {
+            return webClientBuilder.build()
+                    .get()
+                    .uri("lb://MECHANIC-SERVICE/api/mechanics/{id}", id)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+        } catch (WebClientResponseException.NotFound e) {
+            throw new NoAvailableMechanicException("Selected mechanic not found with id: " + id);
+        }
+    }
+
+    /**
      * Resolves the mechanic profile id for a user account (the mechanic's JWT
      * subject). Returns {@code null} only when the account has no linked
      * profile (404). Any other failure (e.g. mechanic-service unreachable) is

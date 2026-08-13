@@ -34,8 +34,28 @@ public class Booking {
     @Column(nullable = false)
     private String address;
 
+    /** GPS-fixed service location (null when typed manually). */
+    @Column
+    private Double latitude;
+
+    @Column
+    private Double longitude;
+
+    /** Platform-controlled estimate shown before booking (₹). */
     @Column(precision = 10, scale = 2)
-    private BigDecimal estimatedCost;
+    private BigDecimal estimatedAmount;
+
+    /** Final amount after inspection — normally equals estimatedAmount (MVP). */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal finalAmount;
+
+    /** AutoCare cut = finalAmount × commission% / 100, set on payment success. */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal platformCommission;
+
+    /** Mechanic's share = finalAmount − platformCommission, set on payment success. */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal mechanicEarning;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -131,12 +151,52 @@ public class Booking {
         this.address = address;
     }
 
-    public BigDecimal getEstimatedCost() {
-        return estimatedCost;
+    public Double getLatitude() {
+        return latitude;
     }
 
-    public void setEstimatedCost(BigDecimal estimatedCost) {
-        this.estimatedCost = estimatedCost;
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public BigDecimal getEstimatedAmount() {
+        return estimatedAmount;
+    }
+
+    public void setEstimatedAmount(BigDecimal estimatedAmount) {
+        this.estimatedAmount = estimatedAmount;
+    }
+
+    public BigDecimal getFinalAmount() {
+        return finalAmount;
+    }
+
+    public void setFinalAmount(BigDecimal finalAmount) {
+        this.finalAmount = finalAmount;
+    }
+
+    public BigDecimal getPlatformCommission() {
+        return platformCommission;
+    }
+
+    public void setPlatformCommission(BigDecimal platformCommission) {
+        this.platformCommission = platformCommission;
+    }
+
+    public BigDecimal getMechanicEarning() {
+        return mechanicEarning;
+    }
+
+    public void setMechanicEarning(BigDecimal mechanicEarning) {
+        this.mechanicEarning = mechanicEarning;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -7,6 +7,8 @@ public class BookingCreatedEvent {
     private Long bookingId;
     private Long userId;
     private Long mechanicId;
+    /** User account id of the assigned mechanic (null if unresolved). */
+    private Long mechanicUserId;
     private String serviceType;
     private LocalDateTime scheduledAt;
 
@@ -14,9 +16,16 @@ public class BookingCreatedEvent {
 
     public BookingCreatedEvent(Long bookingId, Long userId, Long mechanicId,
                                String serviceType, LocalDateTime scheduledAt) {
+        this(bookingId, userId, mechanicId, null, serviceType, scheduledAt);
+    }
+
+    public BookingCreatedEvent(Long bookingId, Long userId, Long mechanicId,
+                               Long mechanicUserId,
+                               String serviceType, LocalDateTime scheduledAt) {
         this.bookingId = bookingId;
         this.userId = userId;
         this.mechanicId = mechanicId;
+        this.mechanicUserId = mechanicUserId;
         this.serviceType = serviceType;
         this.scheduledAt = scheduledAt;
     }
@@ -43,6 +52,14 @@ public class BookingCreatedEvent {
 
     public void setMechanicId(Long mechanicId) {
         this.mechanicId = mechanicId;
+    }
+
+    public Long getMechanicUserId() {
+        return mechanicUserId;
+    }
+
+    public void setMechanicUserId(Long mechanicUserId) {
+        this.mechanicUserId = mechanicUserId;
     }
 
     public String getServiceType() {

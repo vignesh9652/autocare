@@ -30,7 +30,7 @@ public class MechanicService {
         Mechanic mechanic = new Mechanic(
                 userId,
                 request.getName(),
-                request.getPhone(),
+                normalizePhone(request.getPhone()),
                 request.getEmail(),
                 request.getSkills(),
                 request.getServiceArea()
@@ -105,7 +105,7 @@ public class MechanicService {
             mechanic.setName(request.getName());
         }
         if (request.getPhone() != null) {
-            mechanic.setPhone(request.getPhone());
+            mechanic.setPhone(normalizePhone(request.getPhone()));
         }
         if (request.getEmail() != null) {
             // Check if the new email is already taken by another mechanic
@@ -163,9 +163,22 @@ public class MechanicService {
         return toResponse(mechanic);
     }
 
+    /**
+     * Strips any +91 prefix / separators so stored numbers are always a clean
+     * 10-digit Indian mobile format (e.g. "+91 98765 43210" → "9876543210").
+     */
+    private static String normalizePhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return phone;
+        }
+        String digits = phone.replaceAll("\\D", "");
+        return digits.length() > 10 ? digits.substring(digits.length() - 10) : digits;
+    }
+
     private MechanicResponse toResponse(Mechanic mechanic) {
         return new MechanicResponse(
                 mechanic.getId(),
+                mechanic.getUserId(),
                 mechanic.getName(),
                 mechanic.getPhone(),
                 mechanic.getEmail(),

@@ -104,6 +104,18 @@ public class VehicleService {
         vehicleRepository.delete(vehicle);
     }
 
+    public void updateImageUrl(Long id, Long userId, String imageUrl) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new VehicleNotFoundException("Vehicle not found with id: " + id));
+
+        if (!vehicle.getUserId().equals(userId)) {
+            throw new VehicleNotOwnedException("This vehicle does not belong to you");
+        }
+
+        vehicle.setImageUrl(imageUrl);
+        vehicleRepository.save(vehicle);
+    }
+
     private VehicleResponse toResponse(Vehicle vehicle) {
         return new VehicleResponse(
                 vehicle.getId(),
@@ -113,6 +125,7 @@ public class VehicleService {
                 vehicle.getYear(),
                 vehicle.getRegistrationNumber(),
                 vehicle.getVehicleType(),
+                vehicle.getImageUrl(),
                 vehicle.getCreatedAt()
         );
     }

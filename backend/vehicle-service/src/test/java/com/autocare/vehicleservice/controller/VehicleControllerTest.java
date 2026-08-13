@@ -161,8 +161,9 @@ class VehicleControllerTest {
     // ─── UNAUTHENTICATED ──────────────────────────────────────────────────
 
     @Test
-    void anyEndpoint_WithoutAuth_ShouldReturn403() throws Exception {
+    void anyEndpoint_WithoutAuth_ShouldReturn401() throws Exception {
+        // Missing/invalid JWT → 401 (custom JSON authentication entry point).
         mockMvc.perform(get("/api/vehicles"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

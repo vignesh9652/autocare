@@ -36,6 +36,9 @@ public class SparePart {
     @Column(nullable = false)
     private String category;
 
+    /** URL of the uploaded product image (if any). */
+    private String imageUrl;
+
     private String tutorialVideoUrl;
 
     @Column(columnDefinition = "TEXT")
@@ -118,6 +121,14 @@ public class SparePart {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public String getTutorialVideoUrl() {

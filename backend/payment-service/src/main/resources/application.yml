@@ -43,3 +43,12 @@ app:
   # (e.g. Razorpay's webhook secret / Stripe's webhook signing secret).
   webhook:
     secret: autocare-webhook-secret
+
+# Razorpay payment gateway (TEST MODE).
+# Credentials come from environment variables - never commit secrets.
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:}
+  key-secret: ${RAZORPAY_KEY_SECRET:}
+  # Used to verify Razorpay webhook signatures (X-Razorpay-Signature).
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+  currency: INR

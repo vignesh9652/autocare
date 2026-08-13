@@ -13,6 +13,7 @@ public class SparePartResponse {
     private BigDecimal price;
     private int stockQuantity;
     private String category;
+    private String imageUrl;
     private String tutorialVideoUrl;
     private String installationSteps;
     private LocalDateTime createdAt;
@@ -24,6 +25,15 @@ public class SparePartResponse {
                              int stockQuantity, String category,
                              String tutorialVideoUrl, String installationSteps,
                              LocalDateTime createdAt) {
+        this(id, name, description, compatibleVehicleModels, price, stockQuantity, category,
+                null, tutorialVideoUrl, installationSteps, createdAt);
+    }
+
+    public SparePartResponse(Long id, String name, String description,
+                             List<String> compatibleVehicleModels, BigDecimal price,
+                             int stockQuantity, String category,
+                             String imageUrl, String tutorialVideoUrl,
+                             String installationSteps, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -31,6 +41,7 @@ public class SparePartResponse {
         this.price = price;
         this.stockQuantity = stockQuantity;
         this.category = category;
+        this.imageUrl = imageUrl;
         this.tutorialVideoUrl = tutorialVideoUrl;
         this.installationSteps = installationSteps;
         this.createdAt = createdAt;
@@ -90,6 +101,14 @@ public class SparePartResponse {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public String getTutorialVideoUrl() {

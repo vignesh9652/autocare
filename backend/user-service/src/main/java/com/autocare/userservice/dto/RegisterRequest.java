@@ -3,6 +3,7 @@ package com.autocare.userservice.dto;
 import com.autocare.userservice.entity.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class RegisterRequest {
@@ -19,6 +20,13 @@ public class RegisterRequest {
     @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     private String password;
 
+    /**
+     * Optional, but when present must be a valid Indian mobile number
+     * (10 digits starting 6-9, optional +91 prefix / 5-5 separator).
+     * Null passes validation (field is optional).
+     */
+    @Pattern(regexp = "^(?:\\+?91[-\\s]?)?[6-9]\\d{4}[-\\s]?\\d{5}$",
+            message = "Enter a valid 10-digit Indian mobile number")
     private String phone;
 
     /**

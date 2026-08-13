@@ -1,5 +1,6 @@
 package com.autocare.notificationservice.listener;
 
+import com.autocare.notificationservice.service.NotificationStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +24,7 @@ class NotificationEventListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new NotificationEventListener();
+        listener = new NotificationEventListener(new NotificationStore());
     }
 
     @Test

@@ -34,6 +34,16 @@
       "key": "bookingId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "razorpayOrderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "razorpayPaymentId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -397,6 +407,86 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Razorpay Payments",
+      "description": "Razorpay booking payment flow. Run after the booking is COMPLETED.\n1. \"Create Razorpay Order\" returns razorpayOrderId + keyId + amount (paise).\n2. Open the Razorpay Checkout in a browser with those values (test cards/UPI).\n3. \"Verify Payment\" finalizes it server-side (signature verification).\n4. Payment SUCCESS → booking PAID → commission + mechanic earning recorded.\nThe webhook request simulates Razorpay's callback (needs a matching X-Razorpay-Signature).",
+      "item": [
+        {
+          "name": "Create Razorpay Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.razorpayOrderId) {",
+                  "  pm.collectionVariables.set('razorpayOrderId', jsonData.razorpayOrderId);",
+                  "}",
+                  "if (jsonData.paymentId) {",
+                  "  pm.collectionVariables.set('paymentId', jsonData.paymentId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/create-order",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "create-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": {{bookingId}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "verify"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpayPaymentId\": \"{{razorpayPaymentId}}\",\n  \"razorpayOrderId\": \"{{razorpayOrderId}}\",\n  \"razorpaySignature\": \"PASTE_SIGNATURE_FROM_CHECKOUT_HANDLER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Razorpay Webhook (simulated payment.captured)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Razorpay-Signature", "value": "COMPUTE_HMAC_SHA256_OF_BODY_WITH_WEBHOOK_SECRET" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/webhook/razorpay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "webhook", "razorpay"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"payment.captured\",\n  \"payload\": {\n    \"payment\": {\n      \"entity\": {\n        \"id\": \"pay_xxxxxxxxxxxxxxxx\",\n        \"order_id\": \"{{razorpayOrderId}}\",\n        \"amount\": 99900,\n        \"method\": \"upi\",\n        \"status\": \"captured\"\n      }\n    }\n  }\n}"
             }
           }
         }

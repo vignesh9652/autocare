@@ -19,6 +19,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -55,7 +56,7 @@ class BookingControllerTest {
         return new BookingResponse(bookingId, userId, 10L, mechanicId,
                 "Oil Change", BookingStatus.PENDING,
                 LocalDateTime.of(2026, 8, 1, 10, 0),
-                "123 Main St", null, LocalDateTime.now());
+                "123 Main St", 12.9716, 77.5946, null, LocalDateTime.now());
     }
 
     private BookingRequest createSampleRequest() {
@@ -83,7 +84,54 @@ class BookingControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(bookingId))
                 .andExpect(jsonPath("$.serviceType").value("Oil Change"))
-                .andExpect(jsonPath("$.status").value("PENDING"));
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.latitude").value(12.9716))
+                .andExpect(jsonPath("$.longitude").value(77.5946));
+    }
+
+    @Test
+    void createBooking_WithLocationAndEstimate_ShouldForwardFields() throws Exception {
+        BookingRequest req = createSampleRequest();
+        req.setLatitude(12.9716);
+        req.setLongitude(77.5946);
+        req.setEstimatedAmount(new BigDecimal("2798.00"));
+
+        when(bookingService.createBooking(eq(userId), any(BookingRequest.class)))
+                .thenReturn(createSampleResponse());
+
+        mockMvc.perform(post("/api/bookings")
+                        .with(authentication(auth()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated());
+
+        // GPS coordinates + cost estimate are forwarded to the service layer
+        org.mockito.Mockito.verify(bookingService)
+                .createBooking(eq(userId), org.mockito.ArgumentMatchers.argThat(
+                        r -> r.getLatitude() != null && r.getLatitude() == 12.9716
+                                && r.getLongitude() != null && r.getLongitude() == 77.5946
+                                && r.getEstimatedAmount() != null
+                                && r.getEstimatedAmount().compareTo(new BigDecimal("2798.00")) == 0));
+    }
+
+    @Test
+    void createBooking_WithChosenMechanic_ShouldPassMechanicId() throws Exception {
+        BookingRequest req = createSampleRequest();
+        req.setMechanicId(99L);
+
+        when(bookingService.createBooking(eq(userId), any(BookingRequest.class)))
+                .thenReturn(createSampleResponse());
+
+        mockMvc.perform(post("/api/bookings")
+                        .with(authentication(auth()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated());
+
+        // The chosen mechanic id is forwarded to the service layer
+        org.mockito.Mockito.verify(bookingService)
+                .createBooking(eq(userId), org.mockito.ArgumentMatchers.argThat(
+                        r -> r.getMechanicId() != null && r.getMechanicId() == 99L));
     }
 
     @Test
@@ -97,6 +145,20 @@ class BookingControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Validation failed"))
                 .andExpect(jsonPath("$.fieldErrors").exists());
+    }
+
+    @Test
+    void createBooking_WithOutOfRangeCoordinates_ShouldReturn400() throws Exception {
+        BookingRequest req = createSampleRequest();
+        req.setLatitude(91.5);   // invalid: must be within [-90, 90]
+        req.setLongitude(200.0); // invalid: must be within [-180, 180]
+
+        mockMvc.perform(post("/api/bookings")
+                        .with(authentication(auth()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Validation failed"));
     }
 
     @Test
@@ -229,8 +291,9 @@ class BookingControllerTest {
     // ─── UNAUTHENTICATED ───────────────────────────────────────────────
 
     @Test
-    void anyEndpoint_WithoutAuth_ShouldReturn403() throws Exception {
+    void anyEndpoint_WithoutAuth_ShouldReturn401() throws Exception {
+        // Missing/invalid JWT → 401 (custom JSON authentication entry point).
         mockMvc.perform(get("/api/bookings"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

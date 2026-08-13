@@ -35,7 +35,7 @@ public class AdminDashboardService {
     private static final String STATUS_SUCCESS = "SUCCESS";
 
     private static final List<String> BOOKING_STATUSES =
-            List.of("PENDING", "ACCEPTED", "IN_PROGRESS", "COMPLETED", "CANCELLED");
+            List.of("PENDING", "ACCEPTED", "IN_PROGRESS", "COMPLETED", "PAYMENT_PENDING", "PAID", "CANCELLED");
 
     private final UserServiceClient userServiceClient;
     private final VehicleServiceClient vehicleServiceClient;
@@ -95,10 +95,14 @@ public class AdminDashboardService {
             unavailable.add("mechanic-service");
         }
 
-        // ── Total bookings + breakdown by status ───────────────────────────
+        // ── Total bookings + breakdown by status + revenue split ───────────
         Map<String, Long> bookingsByStatus = new LinkedHashMap<>();
         BOOKING_STATUSES.forEach(status -> bookingsByStatus.put(status, 0L));
         dashboard.setBookingsByStatus(bookingsByStatus);
+
+        BigDecimal totalServiceRevenue = BigDecimal.ZERO;
+        BigDecimal platformCommission = BigDecimal.ZERO;
+        BigDecimal mechanicEarnings = BigDecimal.ZERO;
 
         ServiceResult<List<Map<String, Object>>> bookings = bookingServiceClient.getAllBookings(authHeader);
         if (bookings.isAvailable()) {
@@ -106,24 +110,44 @@ public class AdminDashboardService {
             for (Map<String, Object> booking : bookings.getData()) {
                 String status = String.valueOf(booking.get("status"));
                 bookingsByStatus.merge(status, 1L, Long::sum);
+
+                // Only paid bookings carry the final money split
+                if ("PAID".equals(status)) {
+                    totalServiceRevenue = totalServiceRevenue.add(toBigDecimal(booking.get("finalAmount")));
+                    platformCommission = platformCommission.add(toBigDecimal(booking.get("platformCommission")));
+                    mechanicEarnings = mechanicEarnings.add(toBigDecimal(booking.get("mechanicEarning")));
+                }
             }
         } else {
             unavailable.add("booking-service");
         }
+        dashboard.setTotalServiceRevenue(totalServiceRevenue);
+        dashboard.setPlatformCommission(platformCommission);
+        dashboard.setMechanicEarnings(mechanicEarnings);
 
-        // ── Total revenue (sum of SUCCESS payments) ────────────────────────
+        // ── Total revenue + payment status counts ──────────────────────────
         ServiceResult<List<Map<String, Object>>> payments = paymentServiceClient.getAllTransactions(authHeader);
         BigDecimal totalRevenue = BigDecimal.ZERO;
+        long successful = 0, pending = 0, failed = 0;
         if (payments.isAvailable()) {
             for (Map<String, Object> payment : payments.getData()) {
-                if (STATUS_SUCCESS.equals(String.valueOf(payment.get("status")))) {
+                String paymentStatus = String.valueOf(payment.get("status"));
+                if (STATUS_SUCCESS.equals(paymentStatus)) {
                     totalRevenue = totalRevenue.add(toBigDecimal(payment.get("amount")));
+                    successful++;
+                } else if ("INITIATED".equals(paymentStatus)) {
+                    pending++;
+                } else if ("FAILED".equals(paymentStatus)) {
+                    failed++;
                 }
             }
         } else {
             unavailable.add("payment-service");
         }
         dashboard.setTotalRevenue(totalRevenue);
+        dashboard.setSuccessfulPayments(successful);
+        dashboard.setPendingPayments(pending);
+        dashboard.setFailedPayments(failed);
 
         // ── Low-stock spare parts (stockQuantity < 5) ──────────────────────
         ServiceResult<List<Map<String, Object>>> parts = sparePartsServiceClient.getAllParts();
