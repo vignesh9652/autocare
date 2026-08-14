@@ -36,8 +36,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Admin-only: all-transactions listing for the admin-service aggregation layer
                 .requestMatchers("/api/payments/admin/**").hasRole("ADMIN")
-                // Webhook is called by the payment gateway, not by users - no JWT required
-                .requestMatchers("/api/payments/webhook").permitAll()
+                // Webhooks are called by the payment gateways, not by users - no JWT required
+                // (authenticity is proven by the gateway signature header instead)
+                .requestMatchers("/api/payments/webhook", "/api/payments/webhook/razorpay").permitAll()
                 .requestMatchers("/api/payments/**").authenticated()
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .anyRequest().authenticated()

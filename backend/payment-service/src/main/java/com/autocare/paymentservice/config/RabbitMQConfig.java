@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
 
     public static final String TOPIC_EXCHANGE_NAME = "autocare.events";
+    public static final String ROUTING_KEY_PAYMENT_INITIATED = "payment.initiated";
     public static final String ROUTING_KEY_PAYMENT_SUCCESS = "payment.success";
     public static final String ROUTING_KEY_PAYMENT_FAILED = "payment.failed";
 

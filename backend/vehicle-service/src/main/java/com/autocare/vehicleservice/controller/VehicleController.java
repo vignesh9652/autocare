@@ -3,22 +3,28 @@ package com.autocare.vehicleservice.controller;
 import com.autocare.vehicleservice.dto.VehicleRequest;
 import com.autocare.vehicleservice.dto.VehicleResponse;
 import com.autocare.vehicleservice.service.VehicleService;
+import com.autocare.vehicleservice.util.FileStorageService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vehicles")
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    private final FileStorageService fileStorageService;
 
-    public VehicleController(VehicleService vehicleService) {
+    public VehicleController(VehicleService vehicleService,
+                             FileStorageService fileStorageService) {
         this.vehicleService = vehicleService;
+        this.fileStorageService = fileStorageService;
     }
 
     @PostMapping
@@ -68,5 +74,24 @@ public class VehicleController {
         Long userId = (Long) authentication.getPrincipal();
         vehicleService.deleteVehicle(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Upload a photo for the user's vehicle.
+     */
+    @PostMapping("/{id}/image")
+    public ResponseEntity<?> uploadVehicleImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        String imageUrl = fileStorageService.storeImage(file);
+        vehicleService.updateImageUrl(id, userId, imageUrl);
+        VehicleResponse response = vehicleService.getVehicleById(id, userId);
+        return ResponseEntity.ok(Map.of(
+                "message", "Image uploaded",
+                "imageUrl", imageUrl,
+                "vehicle", response
+        ));
     }
 }

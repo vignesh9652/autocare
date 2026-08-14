@@ -5,6 +5,7 @@ services:
     image: mysql:8.0
     container_name: autocare-mysql
     restart: unless-stopped
+    init: true
     environment:
       MYSQL_ROOT_PASSWORD: Vignesh@2004
       MYSQL_DATABASE: autocare_users
@@ -24,12 +25,17 @@ services:
     image: rabbitmq:3.12-management
     container_name: autocare-rabbitmq
     restart: unless-stopped
+    init: true
     ports:
       - "5672:5672"
       - "15672:15672"
     healthcheck:
-      # check_port_connectivity takes >10s (exceeds the timeout), use fast ping instead
-      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      # rabbitmq-diagnostics (ping / check_port_connectivity) is extremely slow on
+      # Docker Desktop for Windows - the Erlang distribution handshake took 13-50s
+      # here, blowing the 10s timeout and leaving the container "unhealthy" even
+      # though the broker runs fine. Check the AMQP listener directly instead
+      # (instant + deterministic).
+      test: [ "CMD-SHELL", "timeout 5 bash -c 'exec 3<>/dev/tcp/127.0.0.1/5672'" ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -41,6 +47,7 @@ services:
     build: ../backend/eureka-server
     container_name: autocare-eureka
     restart: unless-stopped
+    init: true
     ports:
       - "8761:8761"
     environment:
@@ -48,10 +55,14 @@ services:
       JAVA_TOOL_OPTIONS: "-Xmx256m"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8761/actuator/health" ]
-      interval: 15s
+      interval: 30s
       timeout: 5s
       retries: 10
-      start_period: 30s
+      # The JVM takes 5-10 min to boot on Docker Desktop for Windows when all
+      # 10 microservices start at once (Spring context init alone is 300-500s).
+      # Match the generous start_period used by the other services so eureka
+      # isn't flagged unhealthy while it is still starting up.
+      start_period: 480s
 
   # ===================== MICROSERVICES =====================
 
@@ -59,6 +70,7 @@ services:
     build: ../backend/user-service
     container_name: autocare-user
     restart: unless-stopped
+    init: true
     ports:
       - "8081:8081"
     environment:
@@ -68,15 +80,15 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8081/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       mysql:
         condition: service_healthy
@@ -87,8 +99,12 @@ services:
     build: ../backend/vehicle-service
     container_name: autocare-vehicle
     restart: unless-stopped
+    init: true
     ports:
       - "8082:8082"
+    volumes:
+      # Persist uploaded vehicle photos across container rebuilds/restarts
+      - vehicle_uploads:/app/uploads
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/vehicle_db
       SPRING_DATASOURCE_USERNAME: root
@@ -96,15 +112,15 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8082/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       mysql:
         condition: service_healthy
@@ -115,26 +131,31 @@ services:
     build: ../backend/mechanic-service
     container_name: autocare-mechanic
     restart: unless-stopped
+    init: true
     ports:
       - "8083:8083"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mechanic_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: Vignesh@2004
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8083/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       mysql:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
@@ -143,6 +164,7 @@ services:
     build: ../backend/booking-service
     container_name: autocare-booking
     restart: unless-stopped
+    init: true
     ports:
       - "8084:8084"
     environment:
@@ -154,15 +176,15 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8084/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       mysql:
         condition: service_healthy
@@ -175,6 +197,7 @@ services:
     build: ../backend/notification-service
     container_name: autocare-notification
     restart: unless-stopped
+    init: true
     ports:
       - "8085:8085"
     environment:
@@ -183,13 +206,13 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8085/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -200,8 +223,12 @@ services:
     build: ../backend/spareparts-service
     container_name: autocare-spareparts
     restart: unless-stopped
+    init: true
     ports:
       - "8087:8087"
+    volumes:
+      # Persist uploaded part images across container rebuilds/restarts
+      - spareparts_uploads:/app/uploads
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/spareparts_db
       SPRING_DATASOURCE_USERNAME: root
@@ -209,15 +236,15 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8087/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       mysql:
         condition: service_healthy
@@ -228,6 +255,7 @@ services:
     build: ../backend/payment-service
     container_name: autocare-payment
     restart: unless-stopped
+    init: true
     ports:
       - "8086:8086"
     environment:
@@ -239,16 +267,21 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
       APP_WEBHOOK_SECRET: autocare-webhook-secret
+      # Razorpay TEST credentials - injected from the host environment
+      # (root .env file, which is gitignored). Never commit real secrets.
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8086/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       mysql:
         condition: service_healthy
@@ -261,6 +294,7 @@ services:
     build: ../backend/review-service
     container_name: autocare-review
     restart: unless-stopped
+    init: true
     ports:
       - "8088:8088"
     environment:
@@ -270,15 +304,15 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8088/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       mysql:
         condition: service_healthy
@@ -289,6 +323,7 @@ services:
     build: ../backend/admin-service
     container_name: autocare-admin
     restart: unless-stopped
+    init: true
     ports:
       - "8089:8089"
     environment:
@@ -296,15 +331,15 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
       APP_JWT_SECRET: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
       APP_JWT_EXPIRATION_MS: "86400000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8089/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -313,19 +348,20 @@ services:
     build: ../backend/api-gateway
     container_name: autocare-gateway
     restart: unless-stopped
+    init: true
     ports:
       - "8080:8080"
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
-      JAVA_TOOL_OPTIONS: "-Xmx256m"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Djava.net.preferIPv4Stack=true"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 480s
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -336,11 +372,19 @@ services:
     build: ../frontend
     container_name: autocare-frontend
     restart: unless-stopped
+    init: true
     ports:
       - "3000:80"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     depends_on:
-      api-gateway:
-        condition: service_healthy
+      - api-gateway
 
 volumes:
   mysql_data:
+  vehicle_uploads:
+  spareparts_uploads:

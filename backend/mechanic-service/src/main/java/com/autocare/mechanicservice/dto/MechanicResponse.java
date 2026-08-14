@@ -7,6 +7,7 @@ import java.util.List;
 public class MechanicResponse {
 
     private Long id;
+    private Long userId;
     private String name;
     private String phone;
     private String email;
@@ -25,7 +26,17 @@ public class MechanicResponse {
                             Double latitude, Double longitude,
                             AvailabilityStatus availabilityStatus,
                             Double averageRating, Integer totalJobsCompleted) {
+        this(id, null, name, phone, email, skills, serviceArea,
+                latitude, longitude, availabilityStatus, averageRating, totalJobsCompleted);
+    }
+
+    public MechanicResponse(Long id, Long userId, String name, String phone, String email,
+                            List<String> skills, String serviceArea,
+                            Double latitude, Double longitude,
+                            AvailabilityStatus availabilityStatus,
+                            Double averageRating, Integer totalJobsCompleted) {
         this.id = id;
+        this.userId = userId;
         this.name = name;
         this.phone = phone;
         this.email = email;
@@ -44,6 +55,14 @@ public class MechanicResponse {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getName() {

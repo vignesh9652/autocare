@@ -1,30 +1,22 @@
-import type { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import type { Role } from '@/types';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuthStore } from '@/stores/auth-store';
+import { LoadingScreen } from '@/components/ui/Feedback';
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-  /** If provided, the user must have exactly this role (e.g. "ADMIN"). */
-  requiredRole?: Role;
-}
-
-/**
- * Guards a route:
- * - Redirects to /login when there is no valid token.
- * - Redirects to /unauthorized when the user's role does not match requiredRole.
- */
-export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { isAuthenticated, user } = useAuth();
+export function ProtectedRoute({ roles }: { roles?: string[] }) {
+  const { user } = useAuthStore();
   const location = useLocation();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (roles && !roles.includes(user.role)) {
+    const home = user.role === 'ADMIN' ? '/admin' : user.role === 'MECHANIC' ? '/mechanic' : '/dashboard';
+    return <Navigate to={home} replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to="/unauthorized" replace />;
-  }
+  return <Outlet />;
+}
 
+export function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  if (!user) return <LoadingScreen label="Checking session…" />;
   return <>{children}</>;
 }

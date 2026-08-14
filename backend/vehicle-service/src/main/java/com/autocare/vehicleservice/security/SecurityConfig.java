@@ -37,6 +37,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/vehicles/{id}").permitAll()
                 .requestMatchers("/api/vehicles/**").authenticated()
+                // Uploaded vehicle photos are public static files served from
+                // /uploads/** (frontend <img> tags can't send auth headers).
+                .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .anyRequest().authenticated()

@@ -16,14 +16,24 @@ public class PaymentResponse {
     private PaymentStatus status;
     private String gatewayTransactionId;
     private String paymentMethod;
+    private LocalDateTime paidAt;
     private LocalDateTime createdAt;
 
-    public PaymentResponse() {}
+    public PaymentResponse() {
+    }
 
     public PaymentResponse(Long id, ReferenceType referenceType, Long referenceId,
                            BigDecimal amount, String currency, PaymentStatus status,
                            String gatewayTransactionId, String paymentMethod,
                            LocalDateTime createdAt) {
+        this(id, referenceType, referenceId, amount, currency, status,
+                gatewayTransactionId, paymentMethod, null, createdAt);
+    }
+
+    public PaymentResponse(Long id, ReferenceType referenceType, Long referenceId,
+                           BigDecimal amount, String currency, PaymentStatus status,
+                           String gatewayTransactionId, String paymentMethod,
+                           LocalDateTime paidAt, LocalDateTime createdAt) {
         this.id = id;
         this.referenceType = referenceType;
         this.referenceId = referenceId;
@@ -32,6 +42,7 @@ public class PaymentResponse {
         this.status = status;
         this.gatewayTransactionId = gatewayTransactionId;
         this.paymentMethod = paymentMethod;
+        this.paidAt = paidAt;
         this.createdAt = createdAt;
     }
 
@@ -97,6 +108,14 @@ public class PaymentResponse {
 
     public void setPaymentMethod(String paymentMethod) {
         this.paymentMethod = paymentMethod;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
     }
 
     public LocalDateTime getCreatedAt() {

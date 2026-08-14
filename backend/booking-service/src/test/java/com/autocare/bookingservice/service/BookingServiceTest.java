@@ -3,14 +3,19 @@ package com.autocare.bookingservice.service;
 import com.autocare.bookingservice.client.MechanicServiceClient;
 import com.autocare.bookingservice.client.VehicleServiceClient;
 import com.autocare.bookingservice.config.RabbitMQConfig;
+import com.autocare.bookingservice.dto.BookingCreatedEvent;
+import com.autocare.bookingservice.dto.BookingPaidEvent;
 import com.autocare.bookingservice.dto.BookingRequest;
 import com.autocare.bookingservice.dto.BookingResponse;
+import com.autocare.bookingservice.entity.AdditionalServiceRequest;
+import com.autocare.bookingservice.entity.AdditionalServiceStatus;
 import com.autocare.bookingservice.entity.Booking;
 import com.autocare.bookingservice.entity.BookingStatus;
 import com.autocare.bookingservice.exception.BookingNotFoundException;
 import com.autocare.bookingservice.exception.BookingNotOwnedException;
 import com.autocare.bookingservice.exception.InvalidStatusTransitionException;
 import com.autocare.bookingservice.exception.NoAvailableMechanicException;
+import com.autocare.bookingservice.repository.AdditionalServiceRequestRepository;
 import com.autocare.bookingservice.repository.BookingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,13 +24,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class BookingServiceTest {
@@ -34,13 +43,21 @@ class BookingServiceTest {
     private BookingRepository bookingRepository;
 
     @Mock
+    private AdditionalServiceRequestRepository additionalServiceRequestRepository;
+
+    @Mock
     private VehicleServiceClient vehicleServiceClient;
 
     @Mock
     private MechanicServiceClient mechanicServiceClient;
 
     @Mock
+    private ServiceCatalogService serviceCatalogService;
+
+    @Mock
     private RabbitTemplate rabbitTemplate;
+
+    private BookingEventPublisher eventPublisher;
 
     private BookingService bookingService;
 
@@ -58,8 +75,10 @@ class BookingServiceTest {
 
     @BeforeEach
     void setUp() {
-        bookingService = new BookingService(bookingRepository, vehicleServiceClient,
-                mechanicServiceClient, rabbitTemplate);
+        eventPublisher = new BookingEventPublisher();
+        bookingService = new BookingService(bookingRepository, additionalServiceRequestRepository,
+                vehicleServiceClient, mechanicServiceClient, serviceCatalogService,
+                rabbitTemplate, eventPublisher);
 
         request = new BookingRequest();
         request.setVehicleId(vehicleId);
@@ -82,6 +101,8 @@ class BookingServiceTest {
         doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
         when(mechanicServiceClient.findAvailableMechanic("Oil Change", "Downtown"))
                 .thenReturn(mechanicId);
+        when(mechanicServiceClient.getMechanicById(mechanicId))
+                .thenReturn(Map.of("id", mechanicId, "availabilityStatus", "AVAILABLE"));
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         doNothing().when(rabbitTemplate).convertAndSend(
                 anyString(), anyString(), any(Object.class));
@@ -114,6 +135,8 @@ class BookingServiceTest {
         doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
         when(mechanicServiceClient.findAvailableMechanic(null, null))
                 .thenReturn(mechanicId);
+        when(mechanicServiceClient.getMechanicById(mechanicId))
+                .thenReturn(Map.of("id", mechanicId, "availabilityStatus", "AVAILABLE"));
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         doNothing().when(rabbitTemplate).convertAndSend(
                 anyString(), anyString(), any(Object.class));
@@ -125,6 +148,104 @@ class BookingServiceTest {
         verify(mechanicServiceClient).findAvailableMechanic(null, null);
     }
 
+    // ─── CREATE BOOKING — CUSTOMER-CHOSEN MECHANIC ─────────────────────
+
+    @Test
+    void createBooking_WithChosenMechanic_ShouldUseChosenMechanic() {
+        request.setMechanicId(99L);
+
+        doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
+        when(mechanicServiceClient.getMechanicById(99L))
+                .thenReturn(Map.of(
+                        "id", 99L,
+                        "userId", mechanicUserId,
+                        "availabilityStatus", "AVAILABLE"));
+        // Echo back the booking passed to save so mechanicId reflects the request
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        doNothing().when(rabbitTemplate).convertAndSend(
+                anyString(), anyString(), any(Object.class));
+
+        BookingResponse response = bookingService.createBooking(userId, request);
+
+        assertNotNull(response);
+        // The booking is routed to the customer-chosen mechanic
+        assertEquals(99L, response.getMechanicId());
+        // Auto-assign is skipped when a mechanic is chosen
+        verify(mechanicServiceClient, never()).findAvailableMechanic(any(), any());
+        verify(mechanicServiceClient).getMechanicById(99L);
+    }
+
+    @Test
+    void createBooking_WithUnavailableChosenMechanic_ShouldThrow() {
+        request.setMechanicId(99L);
+
+        doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
+        when(mechanicServiceClient.getMechanicById(99L))
+                .thenReturn(Map.of("id", 99L, "availabilityStatus", "BUSY"));
+
+        assertThrows(NoAvailableMechanicException.class,
+                () -> bookingService.createBooking(userId, request));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void createBooking_WithChosenMechanic_ShouldIncludeMechanicUserIdInEvent() {
+        request.setMechanicId(99L);
+
+        doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
+        when(mechanicServiceClient.getMechanicById(99L))
+                .thenReturn(Map.of(
+                        "id", 99L,
+                        "userId", mechanicUserId,
+                        "availabilityStatus", "AVAILABLE"));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
+
+        ArgumentCaptor<BookingCreatedEvent> captor = ArgumentCaptor.forClass(BookingCreatedEvent.class);
+        doNothing().when(rabbitTemplate).convertAndSend(
+                anyString(), anyString(), captor.capture());
+
+        bookingService.createBooking(userId, request);
+
+        BookingCreatedEvent event = captor.getValue();
+        assertEquals(99L, event.getMechanicId());
+        assertEquals(mechanicUserId, event.getMechanicUserId());
+    }
+
+    @Test
+    void createBooking_WithLocationAndEstimate_ShouldPersistAndEcho() {
+        request.setLatitude(12.9716);
+        request.setLongitude(77.5946);
+        request.setEstimatedAmount(new BigDecimal("2798.00"));
+
+        doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
+        when(mechanicServiceClient.findAvailableMechanic("Oil Change", "Downtown"))
+                .thenReturn(mechanicId);
+        when(mechanicServiceClient.getMechanicById(mechanicId))
+                .thenReturn(Map.of("id", mechanicId, "availabilityStatus", "AVAILABLE"));
+        // Catalogue resolver is asked, and (as in prod) returns a value
+        when(serviceCatalogService.resolveEstimatedAmount(anyString()))
+                .thenReturn(new BigDecimal("2798.00"));
+        // Echo back the booking so the response reflects the persisted values
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        doNothing().when(rabbitTemplate).convertAndSend(
+                anyString(), anyString(), any(Object.class));
+
+        BookingResponse response = bookingService.createBooking(userId, request);
+
+        assertNotNull(response);
+        assertEquals(12.9716, response.getLatitude(), 0.0001);
+        assertEquals(77.5946, response.getLongitude(), 0.0001);
+        assertEquals(0, new BigDecimal("2798.00").compareTo(response.getEstimatedAmount()));
+
+        ArgumentCaptor<Booking> captor = ArgumentCaptor.forClass(Booking.class);
+        verify(bookingRepository).save(captor.capture());
+        assertEquals(12.9716, captor.getValue().getLatitude(), 0.0001);
+        assertEquals(77.5946, captor.getValue().getLongitude(), 0.0001);
+        assertEquals(0, new BigDecimal("2798.00").compareTo(captor.getValue().getEstimatedAmount()));
+    }
+
     @Test
     void createBooking_WhenNoMechanicAvailable_ShouldThrow() {
         doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
@@ -134,6 +255,8 @@ class BookingServiceTest {
         assertThrows(NoAvailableMechanicException.class,
                 () -> bookingService.createBooking(userId, request));
         verify(bookingRepository, never()).save(any());
+        // No profile lookup happens when auto-assign fails
+        verify(mechanicServiceClient, never()).getMechanicById(any());
     }
 
     @Test
@@ -400,6 +523,92 @@ class BookingServiceTest {
                         bookingId, BookingStatus.ACCEPTED, mechanicUserId, "MECHANIC"));
     }
 
+    // ─── ADDITIONAL SERVICES — COMPLETION GUARD + FINAL AMOUNT ────────────
+
+    @Test
+    void mechanic_CannotComplete_WhileAdditionalServiceRequestIsPending() {
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        // An additional-service request is still awaiting the customer
+        when(additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                bookingId, AdditionalServiceStatus.PENDING)).thenReturn(true);
+
+        assertThrows(InvalidStatusTransitionException.class,
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC"));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void mechanic_CanComplete_OnceAllRequestsAreResolved() {
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        // No PENDING request → completion is allowed
+        when(additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                bookingId, AdditionalServiceStatus.PENDING)).thenReturn(false);
+        when(additionalServiceRequestRepository.findByBookingIdOrderByCreatedAtDesc(bookingId))
+                .thenReturn(List.of());
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC");
+
+        assertEquals(BookingStatus.COMPLETED, response.getStatus());
+    }
+
+    @Test
+    void complete_WithApprovedAdditionalService_ShouldIncludeItInFinalAmount() {
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        booking.setEstimatedAmount(new BigDecimal("500.00"));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        when(additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                bookingId, AdditionalServiceStatus.PENDING)).thenReturn(false);
+
+        AdditionalServiceRequest approved = new AdditionalServiceRequest(
+                bookingId, mechanicId, mechanicUserId, userId, 5L,
+                "Brake Pad Replacement", "Worn out", new BigDecimal("800.00"));
+        approved.setStatus(AdditionalServiceStatus.APPROVED);
+        when(additionalServiceRequestRepository.findByBookingIdOrderByCreatedAtDesc(bookingId))
+                .thenReturn(List.of(approved));
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC");
+
+        assertEquals(0, new BigDecimal("800.00").compareTo(response.getAdditionalAmount()));
+        assertEquals(0, new BigDecimal("1300.00").compareTo(response.getFinalAmount()));
+    }
+
+    @Test
+    void complete_WithRejectedAdditionalService_ShouldExcludeItFromFinalAmount() {
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        booking.setEstimatedAmount(new BigDecimal("500.00"));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        when(additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                bookingId, AdditionalServiceStatus.PENDING)).thenReturn(false);
+
+        AdditionalServiceRequest rejected = new AdditionalServiceRequest(
+                bookingId, mechanicId, mechanicUserId, userId, 5L,
+                "Brake Pad Replacement", "Worn out", new BigDecimal("800.00"));
+        rejected.setStatus(AdditionalServiceStatus.REJECTED);
+        when(additionalServiceRequestRepository.findByBookingIdOrderByCreatedAtDesc(bookingId))
+                .thenReturn(List.of(rejected));
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC");
+
+        assertEquals(0, new BigDecimal("0.00").compareTo(response.getAdditionalAmount()));
+        assertEquals(0, new BigDecimal("500.00").compareTo(response.getFinalAmount()));
+    }
+
     // ─── UPDATE STATUS — ADMIN ─────────────────────────────────────────
 
     @Test
@@ -415,6 +624,128 @@ class BookingServiceTest {
 
         BookingResponse response = bookingService.updateBookingStatus(
                 bookingId, BookingStatus.COMPLETED, userId, "ADMIN");
+
+        assertEquals(BookingStatus.COMPLETED, response.getStatus());
+    }
+
+    // ─── PAYMENT LIFECYCLE ─────────────────────────────────────────────
+
+    @Test
+    void markPaymentInitiated_ShouldMoveCompletedToPaymentPending() {
+        booking.setStatus(BookingStatus.COMPLETED);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        Booking pending = new Booking(userId, vehicleId, mechanicId, "Oil Change",
+                LocalDateTime.of(2026, 8, 1, 10, 0), "123 Main St");
+        pending.setId(bookingId);
+        pending.setStatus(BookingStatus.PAYMENT_PENDING);
+        when(bookingRepository.save(any(Booking.class))).thenReturn(pending);
+
+        BookingResponse response = bookingService.markPaymentInitiated(bookingId);
+
+        assertEquals(BookingStatus.PAYMENT_PENDING, response.getStatus());
+        verify(bookingRepository).save(any(Booking.class));
+    }
+
+    @Test
+    void markPaid_ShouldComputeCommissionAndEarningAndPublishEvent() {
+        booking.setStatus(BookingStatus.PAYMENT_PENDING);
+        booking.setEstimatedAmount(new BigDecimal("999.00"));
+        booking.setFinalAmount(new BigDecimal("999.00"));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(serviceCatalogService.currentCommissionPercentage()).thenReturn(new BigDecimal("15.00"));
+
+        // Echo back the saved booking so the response reflects commission
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ArgumentCaptor<BookingPaidEvent> eventCaptor = ArgumentCaptor.forClass(BookingPaidEvent.class);
+        doNothing().when(rabbitTemplate).convertAndSend(
+                anyString(), anyString(), eventCaptor.capture());
+
+        BookingResponse response = bookingService.markPaid(bookingId, 777L, userId, new BigDecimal("999.00"));
+
+        assertEquals(BookingStatus.PAID, response.getStatus());
+        assertEquals(0, new BigDecimal("149.85").compareTo(response.getPlatformCommission()));
+        assertEquals(0, new BigDecimal("849.15").compareTo(response.getMechanicEarning()));
+
+        BookingPaidEvent event = eventCaptor.getValue();
+        assertEquals(bookingId, event.getBookingId());
+        assertEquals(mechanicId, event.getMechanicId());
+        assertEquals(777L, event.getPaymentId());
+        assertEquals(0, new BigDecimal("149.85").compareTo(event.getPlatformCommission()));
+        assertEquals(0, new BigDecimal("849.15").compareTo(event.getMechanicEarning()));
+        verify(rabbitTemplate).convertAndSend(
+                eq(RabbitMQConfig.TOPIC_EXCHANGE_NAME),
+                eq(RabbitMQConfig.ROUTING_KEY_BOOKING_PAID),
+                any(Object.class));
+    }
+
+    @Test
+    void markPaid_WhenAlreadyPaid_ShouldBeIdempotent() {
+        booking.setStatus(BookingStatus.PAID);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        bookingService.markPaid(bookingId, 777L, userId, new BigDecimal("999.00"));
+
+        verify(bookingRepository, never()).save(any());
+        verify(rabbitTemplate, never()).convertAndSend(
+                anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_PAID), any(Object.class));
+    }
+
+    @Test
+    void markPaid_WhenNotAwaitingPayment_ShouldSkip() {
+        booking.setStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        BookingResponse response = bookingService.markPaid(bookingId, 777L, userId, new BigDecimal("999.00"));
+
+        assertEquals(BookingStatus.PENDING, response.getStatus());
+        verify(bookingRepository, never()).save(any());
+        verify(rabbitTemplate, never()).convertAndSend(
+                anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_PAID), any(Object.class));
+    }
+
+    @Test
+    void markPaid_ByAnotherUser_ShouldSkip() {
+        booking.setStatus(BookingStatus.PAYMENT_PENDING);
+        booking.setEstimatedAmount(new BigDecimal("999.00"));
+        booking.setFinalAmount(new BigDecimal("999.00"));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        BookingResponse response = bookingService.markPaid(bookingId, 777L, otherUserId, new BigDecimal("999.00"));
+
+        assertEquals(BookingStatus.PAYMENT_PENDING, response.getStatus());
+        verify(bookingRepository, never()).save(any());
+        verify(rabbitTemplate, never()).convertAndSend(
+                anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_PAID), any(Object.class));
+    }
+
+    @Test
+    void markPaid_WithMismatchedAmount_ShouldSkip() {
+        booking.setStatus(BookingStatus.PAYMENT_PENDING);
+        booking.setEstimatedAmount(new BigDecimal("999.00"));
+        booking.setFinalAmount(new BigDecimal("999.00"));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        BookingResponse response = bookingService.markPaid(bookingId, 777L, userId, new BigDecimal("1.00"));
+
+        assertEquals(BookingStatus.PAYMENT_PENDING, response.getStatus());
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void revertToCompleted_ShouldMovePaymentPendingBackToCompleted() {
+        booking.setStatus(BookingStatus.PAYMENT_PENDING);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+
+        Booking completed = new Booking(userId, vehicleId, mechanicId, "Oil Change",
+                LocalDateTime.of(2026, 8, 1, 10, 0), "123 Main St");
+        completed.setId(bookingId);
+        completed.setStatus(BookingStatus.COMPLETED);
+        when(bookingRepository.save(any(Booking.class))).thenReturn(completed);
+
+        BookingResponse response = bookingService.revertToCompleted(bookingId);
 
         assertEquals(BookingStatus.COMPLETED, response.getStatus());
     }

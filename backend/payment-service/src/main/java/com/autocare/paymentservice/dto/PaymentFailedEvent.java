@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 
 public class PaymentFailedEvent {
 
+    private Long userId;
     private Long transactionId;
     private ReferenceType referenceType;
     private Long referenceId;
@@ -13,12 +14,21 @@ public class PaymentFailedEvent {
 
     public PaymentFailedEvent() {}
 
-    public PaymentFailedEvent(Long transactionId, ReferenceType referenceType,
+    public PaymentFailedEvent(Long userId, Long transactionId, ReferenceType referenceType,
                               Long referenceId, BigDecimal amount) {
+        this.userId = userId;
         this.transactionId = transactionId;
         this.referenceType = referenceType;
         this.referenceId = referenceId;
         this.amount = amount;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public Long getTransactionId() {

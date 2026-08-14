@@ -3,6 +3,7 @@ package com.autocare.mechanicservice.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 
 import java.util.List;
 
@@ -12,6 +13,8 @@ public class MechanicRequest {
     private String name;
 
     @NotBlank(message = "Phone is required")
+    @Pattern(regexp = "^(?:\\+?91[-\\s]?)?[6-9]\\d{4}[-\\s]?\\d{5}$",
+            message = "Enter a valid 10-digit Indian mobile number")
     private String phone;
 
     @NotBlank(message = "Email is required")

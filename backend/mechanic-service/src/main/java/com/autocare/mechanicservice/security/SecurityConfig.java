@@ -36,6 +36,12 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/mechanics").permitAll()
+                // Earnings of the logged-in mechanic (declared before /{id} so
+                // the path-variable rule does not swallow it).
+                .requestMatchers(HttpMethod.GET, "/api/mechanics/earnings").hasRole("MECHANIC")
+                // Single-mechanic detail is public so the booking-service can
+                // validate a customer-chosen mechanic without a user token.
+                .requestMatchers(HttpMethod.GET, "/api/mechanics/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/mechanics/by-user/**").permitAll()
                 .requestMatchers("/api/mechanics/**").authenticated()
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

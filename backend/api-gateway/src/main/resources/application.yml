@@ -60,6 +60,18 @@ spring:
           predicates:
             - Path=/api/bookings/**
 
+        # Platform Service Catalogue (owned by booking-service)
+        - id: booking-service-services
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/services/**
+
+        # Additional Services / Vehicle Inspection (owned by booking-service)
+        - id: booking-service-additional-services
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/additional-services/**
+
         # Payment Service
         - id: payment-service
           uri: lb://PAYMENT-SERVICE
@@ -83,6 +95,12 @@ spring:
           uri: lb://REVIEW-SERVICE
           predicates:
             - Path=/api/reviews/**
+
+        # Notification Service
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notifications/**
 
         # Admin Service (admin-only aggregation endpoints)
         - id: admin-service

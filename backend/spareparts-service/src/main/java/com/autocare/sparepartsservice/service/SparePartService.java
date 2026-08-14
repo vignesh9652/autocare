@@ -64,6 +64,12 @@ public class SparePartService {
                         "Spare part not found with id: " + id));
     }
 
+    public void updateImageUrl(Long id, String imageUrl) {
+        SparePart part = findSparePart(id);
+        part.setImageUrl(imageUrl);
+        sparePartRepository.save(part);
+    }
+
     private SparePartResponse toResponse(SparePart part) {
         return new SparePartResponse(
                 part.getId(),
@@ -73,6 +79,7 @@ public class SparePartService {
                 part.getPrice(),
                 part.getStockQuantity(),
                 part.getCategory(),
+                part.getImageUrl(),
                 part.getTutorialVideoUrl(),
                 part.getInstallationSteps(),
                 part.getCreatedAt()

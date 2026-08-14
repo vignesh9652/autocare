@@ -6,7 +6,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "transactions")
+@Table(name = "transactions", indexes = {
+        @Index(name = "idx_txn_reference", columnList = "referenceType,referenceId,status"),
+        @Index(name = "idx_txn_razorpay_payment", columnList = "razorpayPaymentId")
+})
 public class Transaction {
 
     @Id
@@ -36,8 +39,19 @@ public class Transaction {
     @Column(unique = true)
     private String gatewayTransactionId;
 
+    /** Razorpay payment id (pay_…) — set when the payment is captured. */
+    @Column(unique = true)
+    private String razorpayPaymentId;
+
+    /** Razorpay signature returned by checkout — verified server-side. */
+    @Column(length = 512)
+    private String razorpaySignature;
+
     @Column(nullable = false)
     private String paymentMethod;
+
+    /** Set when the payment reaches SUCCESS (gateway confirmation time). */
+    private LocalDateTime paidAt;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -131,12 +145,36 @@ public class Transaction {
         this.gatewayTransactionId = gatewayTransactionId;
     }
 
+    public String getRazorpayPaymentId() {
+        return razorpayPaymentId;
+    }
+
+    public void setRazorpayPaymentId(String razorpayPaymentId) {
+        this.razorpayPaymentId = razorpayPaymentId;
+    }
+
+    public String getRazorpaySignature() {
+        return razorpaySignature;
+    }
+
+    public void setRazorpaySignature(String razorpaySignature) {
+        this.razorpaySignature = razorpaySignature;
+    }
+
     public String getPaymentMethod() {
         return paymentMethod;
     }
 
     public void setPaymentMethod(String paymentMethod) {
         this.paymentMethod = paymentMethod;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
     }
 
     public LocalDateTime getCreatedAt() {

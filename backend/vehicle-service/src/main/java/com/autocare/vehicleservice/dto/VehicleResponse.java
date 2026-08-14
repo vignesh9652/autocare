@@ -12,6 +12,7 @@ public class VehicleResponse {
     private int year;
     private String registrationNumber;
     private VehicleType vehicleType;
+    private String imageUrl;
     private LocalDateTime createdAt;
 
     public VehicleResponse() {}
@@ -19,6 +20,12 @@ public class VehicleResponse {
     public VehicleResponse(Long id, Long userId, String make, String model, int year,
                            String registrationNumber, VehicleType vehicleType,
                            LocalDateTime createdAt) {
+        this(id, userId, make, model, year, registrationNumber, vehicleType, null, createdAt);
+    }
+
+    public VehicleResponse(Long id, Long userId, String make, String model, int year,
+                           String registrationNumber, VehicleType vehicleType,
+                           String imageUrl, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.make = make;
@@ -26,6 +33,7 @@ public class VehicleResponse {
         this.year = year;
         this.registrationNumber = registrationNumber;
         this.vehicleType = vehicleType;
+        this.imageUrl = imageUrl;
         this.createdAt = createdAt;
     }
 
@@ -83,6 +91,14 @@ public class VehicleResponse {
 
     public void setVehicleType(VehicleType vehicleType) {
         this.vehicleType = vehicleType;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public LocalDateTime getCreatedAt() {

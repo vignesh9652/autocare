@@ -30,6 +30,9 @@ public class Vehicle {
     @Column(nullable = false)
     private VehicleType vehicleType;
 
+    /** URL of the uploaded vehicle photo (if any). */
+    private String imageUrl;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -104,6 +107,14 @@ public class Vehicle {
 
     public void setVehicleType(VehicleType vehicleType) {
         this.vehicleType = vehicleType;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public LocalDateTime getCreatedAt() {

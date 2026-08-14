@@ -1,6 +1,7 @@
 package com.autocare.bookingservice.dto;
 
 import com.autocare.bookingservice.entity.BookingStatus;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -14,15 +15,48 @@ public class BookingResponse {
     private BookingStatus status;
     private LocalDateTime scheduledAt;
     private String address;
-    private BigDecimal estimatedCost;
+    private Double latitude;
+    private Double longitude;
+    private BigDecimal estimatedAmount;
+    /** Sum of APPROVED additional services (0 when none). */
+    private BigDecimal additionalAmount;
+    private BigDecimal finalAmount;
+    private BigDecimal platformCommission;
+    private BigDecimal mechanicEarning;
     private LocalDateTime createdAt;
 
-    public BookingResponse() {}
+    public BookingResponse() {
+    }
 
     public BookingResponse(Long id, Long userId, Long vehicleId, Long mechanicId,
                            String serviceType, BookingStatus status,
                            LocalDateTime scheduledAt, String address,
-                           BigDecimal estimatedCost, LocalDateTime createdAt) {
+                           BigDecimal estimatedAmount, LocalDateTime createdAt) {
+        this(id, userId, vehicleId, mechanicId, serviceType, status,
+                scheduledAt, address, null, null, estimatedAmount,
+                null, null, null, null, createdAt);
+    }
+
+    public BookingResponse(Long id, Long userId, Long vehicleId, Long mechanicId,
+                           String serviceType, BookingStatus status,
+                           LocalDateTime scheduledAt, String address,
+                           Double latitude, Double longitude,
+                           BigDecimal estimatedAmount, LocalDateTime createdAt) {
+        this(id, userId, vehicleId, mechanicId, serviceType, status,
+                scheduledAt, address, latitude, longitude, estimatedAmount,
+                null, null, null, null, createdAt);
+    }
+
+    public BookingResponse(Long id, Long userId, Long vehicleId, Long mechanicId,
+                           String serviceType, BookingStatus status,
+                           LocalDateTime scheduledAt, String address,
+                           Double latitude, Double longitude,
+                           BigDecimal estimatedAmount,
+                           BigDecimal additionalAmount,
+                           BigDecimal finalAmount,
+                           BigDecimal platformCommission,
+                           BigDecimal mechanicEarning,
+                           LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.vehicleId = vehicleId;
@@ -31,7 +65,13 @@ public class BookingResponse {
         this.status = status;
         this.scheduledAt = scheduledAt;
         this.address = address;
-        this.estimatedCost = estimatedCost;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.estimatedAmount = estimatedAmount;
+        this.additionalAmount = additionalAmount;
+        this.finalAmount = finalAmount;
+        this.platformCommission = platformCommission;
+        this.mechanicEarning = mechanicEarning;
         this.createdAt = createdAt;
     }
 
@@ -99,12 +139,60 @@ public class BookingResponse {
         this.address = address;
     }
 
-    public BigDecimal getEstimatedCost() {
-        return estimatedCost;
+    public Double getLatitude() {
+        return latitude;
     }
 
-    public void setEstimatedCost(BigDecimal estimatedCost) {
-        this.estimatedCost = estimatedCost;
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public BigDecimal getEstimatedAmount() {
+        return estimatedAmount;
+    }
+
+    public void setEstimatedAmount(BigDecimal estimatedAmount) {
+        this.estimatedAmount = estimatedAmount;
+    }
+
+    public BigDecimal getAdditionalAmount() {
+        return additionalAmount;
+    }
+
+    public void setAdditionalAmount(BigDecimal additionalAmount) {
+        this.additionalAmount = additionalAmount;
+    }
+
+    public BigDecimal getFinalAmount() {
+        return finalAmount;
+    }
+
+    public void setFinalAmount(BigDecimal finalAmount) {
+        this.finalAmount = finalAmount;
+    }
+
+    public BigDecimal getPlatformCommission() {
+        return platformCommission;
+    }
+
+    public void setPlatformCommission(BigDecimal platformCommission) {
+        this.platformCommission = platformCommission;
+    }
+
+    public BigDecimal getMechanicEarning() {
+        return mechanicEarning;
+    }
+
+    public void setMechanicEarning(BigDecimal mechanicEarning) {
+        this.mechanicEarning = mechanicEarning;
     }
 
     public LocalDateTime getCreatedAt() {

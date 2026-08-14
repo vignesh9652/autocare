@@ -37,6 +37,14 @@ public class SecurityConfig {
                 // Admin-only: all-bookings listing for the admin-service aggregation layer
                 .requestMatchers("/api/bookings/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/bookings/**").authenticated()
+                // Admin-only: service price/commission management
+                .requestMatchers("/api/services/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/services/**").authenticated()
+                // Additional services: only mechanics raise requests; only
+                // admins list all; customers approve/reject via /api/additional-services/{id}/**
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/additional-services").hasRole("MECHANIC")
+                .requestMatchers("/api/additional-services/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/additional-services/**").authenticated()
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .anyRequest().authenticated()

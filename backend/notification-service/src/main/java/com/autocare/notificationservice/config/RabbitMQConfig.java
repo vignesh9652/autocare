@@ -1,11 +1,18 @@
 package com.autocare.notificationservice.config;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConversionException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.io.IOException;
+import java.util.Map;
 
 @Configuration
 public class RabbitMQConfig {
@@ -16,6 +23,9 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY_BOOKING_COMPLETED = "booking.completed";
     public static final String ROUTING_KEY_PAYMENT_SUCCESS = "payment.success";
     public static final String ROUTING_KEY_PAYMENT_FAILED = "payment.failed";
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_REQUESTED = "additional-service.requested";
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_APPROVED = "additional-service.approved";
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_REJECTED = "additional-service.rejected";
 
     /**
      * Declare the same topic exchange that booking-service and payment-service
@@ -79,6 +89,33 @@ public class RabbitMQConfig {
     }
 
     /**
+     * Bind the queue to receive additional-service (inspection) events.
+     */
+    @Bean
+    public Binding additionalServiceRequestedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_ADDITIONAL_SERVICE_REQUESTED);
+    }
+
+    @Bean
+    public Binding additionalServiceApprovedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_ADDITIONAL_SERVICE_APPROVED);
+    }
+
+    @Bean
+    public Binding additionalServiceRejectedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_ADDITIONAL_SERVICE_REJECTED);
+    }
+
+    /**
      * RabbitAdmin ensures the exchange, queue, and bindings declared below
      * are created/exist when the connection is established.
      */
@@ -88,19 +125,29 @@ public class RabbitMQConfig {
     }
 
     /**
-     * JSON message converter so we can deserialize events from the
-     * booking-service and payment-service.
+     * JSON message converter for incoming events.
      *
-     * Type precedence is set to {@code INFERRED} so the listener deserializes
-     * payloads into the {@code Map} type of the @RabbitHandler method instead
-     * of trying to resolve the producer's {@code __TypeId__} header (which
-     * references event DTO classes that are not on this service's classpath).
+     * Producers (booking-service, payment-service) attach a {@code __TypeId__}
+     * header that references event DTO classes which do not exist on this
+     * service's classpath, so the default type-mapper would fail with a
+     * ClassNotFoundException. We therefore always deserialize the payload into
+     * a {@code Map<String, Object>} - exactly the shape the @RabbitHandler
+     * method expects - regardless of any type headers.
      */
     @Bean
     public Jackson2JsonMessageConverter jsonMessageConverter() {
-        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
-        converter.setTypePrecedence(
-                org.springframework.amqp.support.converter.Jackson2JavaTypeMapper.TypePrecedence.INFERRED);
-        return converter;
+        ObjectMapper objectMapper = new ObjectMapper();
+        return new Jackson2JsonMessageConverter() {
+            @Override
+            public Object fromMessage(Message message) throws MessageConversionException {
+                try {
+                    return objectMapper.readValue(
+                            message.getBody(), new TypeReference<Map<String, Object>>() {
+                            });
+                } catch (IOException e) {
+                    throw new MessageConversionException("Failed to convert notification event", e);
+                }
+            }
+        };
     }
 }
