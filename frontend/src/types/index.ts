@@ -4,6 +4,7 @@ export type AccountStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type VehicleType = 'CAR' | 'SEDAN' | 'SUV' | 'HATCHBACK' | 'TRUCK' | 'VAN' | 'BIKE' | 'MOTORCYCLE';
 export type AvailabilityStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
 export type BookingStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'PAYMENT_PENDING' | 'PAID' | 'REJECTED' | 'CANCELLED';
+export type AdditionalServiceStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type PaymentStatus = 'INITIATED' | 'SUCCESS' | 'FAILED';
 export type PaymentMethod = 'UPI' | 'CARD' | 'NETBANKING' | 'CASH';
 export type EarningStatus = 'PENDING' | 'PAID';
@@ -126,6 +127,8 @@ export interface BookingResponse {
   longitude?: number | null;
   /** Platform estimate shown before booking. */
   estimatedAmount: number | null;
+  /** Sum of APPROVED additional services (0 when none). */
+  additionalAmount: number | null;
   /** Final amount after inspection (set when the service completes). */
   finalAmount: number | null;
   /** AutoCare commission (set after payment). */
@@ -160,6 +163,27 @@ export interface RecommendationResponse {
   status: RecommendationStatus;
   createdAt: string;
   decidedAt?: string;
+}
+
+// ─── Additional services (vehicle inspection) ───────────────────────────────
+export interface AdditionalServiceResponse {
+  id: number;
+  bookingId: number;
+  mechanicId: number;
+  customerId: number;
+  serviceId: number;
+  serviceName: string;
+  reason?: string | null;
+  amount: number;
+  status: AdditionalServiceStatus;
+  customerResponseAt?: string | null;
+  createdAt: string;
+}
+
+export interface AdditionalServiceCreateRequest {
+  bookingId: number;
+  serviceId: number;
+  reason: string;
 }
 
 // ─── Payments ───────────────────────────────────────────────────────────────

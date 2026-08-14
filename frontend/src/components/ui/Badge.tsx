@@ -25,10 +25,11 @@ const payment: Record<string, Variant> = { INITIATED: 'warning', SUCCESS: 'succe
 const availability: Record<string, Variant> = { AVAILABLE: 'success', BUSY: 'warning', OFFLINE: 'neutral' };
 const account: Record<string, Variant> = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'error' };
 const recommendation: Record<string, Variant> = { RECOMMENDED: 'info', APPROVED: 'success', REJECTED: 'error', ORDERED: 'purple' };
+const additional: Record<string, Variant> = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'error', CANCELLED: 'neutral' };
 const role: Record<string, Variant> = { ADMIN: 'purple', MECHANIC: 'info', CUSTOMER: 'default' };
 
-export function StatusBadge({ kind, status }: { kind: 'booking' | 'payment' | 'availability' | 'account' | 'recommendation' | 'role'; status: string }) {
-  const map = { booking, payment, availability, account, recommendation, role }[kind];
+export function StatusBadge({ kind, status }: { kind: 'booking' | 'payment' | 'availability' | 'account' | 'recommendation' | 'additional' | 'role'; status: string }) {
+  const map = { booking, payment, availability, account, recommendation, additional, role }[kind];
   const variant = map[status] ?? 'default';
   return <Badge variant={variant}>{status.replaceAll('_', ' ')}</Badge>;
 }

@@ -108,6 +108,65 @@ public class NotificationEventListener {
                         "Payment failed",
                         "Your payment of ₹" + amount + " for " + referenceLabel(referenceType, referenceId) + " failed. Please try again.");
             }
+            case RabbitMQConfig.ROUTING_KEY_ADDITIONAL_SERVICE_REQUESTED -> {
+                Long bookingId = getLong(event, "bookingId");
+                Long customerId = getLong(event, "customerId");
+                String serviceName = getString(event, "serviceName");
+                String reason = getString(event, "reason");
+                BigDecimal amount = getBigDecimal(event, "amount");
+                BigDecimal newTotal = getBigDecimal(event, "newTotal");
+
+                log.info("🔧 [ADDITIONAL SERVICE REQUESTED] Booking #{} | Service: {} | Amount: {}",
+                        bookingId, serviceName, amount);
+
+                if (customerId != null) {
+                    notificationStore.add(
+                            customerId,
+                            "ADDITIONAL_SERVICE",
+                            "Additional service requires your approval",
+                            "Your mechanic found an additional issue and recommends " + serviceName
+                                    + " (₹" + amount + ") for booking #" + bookingId
+                                    + (reason != null ? ". Reason: " + reason : "")
+                                    + ". New estimated total: ₹" + newTotal
+                                    + ". Your approval is required before this work is performed.");
+                }
+            }
+            case RabbitMQConfig.ROUTING_KEY_ADDITIONAL_SERVICE_APPROVED -> {
+                Long bookingId = getLong(event, "bookingId");
+                Long mechanicUserId = getLong(event, "mechanicUserId");
+                String serviceName = getString(event, "serviceName");
+                BigDecimal amount = getBigDecimal(event, "amount");
+
+                log.info("✅ [ADDITIONAL SERVICE APPROVED] Booking #{} | Service: {}",
+                        bookingId, serviceName);
+
+                if (mechanicUserId != null) {
+                    notificationStore.add(
+                            mechanicUserId,
+                            "ADDITIONAL_SERVICE",
+                            "Customer approved additional service",
+                            "The customer approved " + serviceName + " (₹" + amount
+                                    + ") for booking #" + bookingId + ". You can now perform this service.");
+                }
+            }
+            case RabbitMQConfig.ROUTING_KEY_ADDITIONAL_SERVICE_REJECTED -> {
+                Long bookingId = getLong(event, "bookingId");
+                Long mechanicUserId = getLong(event, "mechanicUserId");
+                String serviceName = getString(event, "serviceName");
+                BigDecimal amount = getBigDecimal(event, "amount");
+
+                log.info("❌ [ADDITIONAL SERVICE REJECTED] Booking #{} | Service: {}",
+                        bookingId, serviceName);
+
+                if (mechanicUserId != null) {
+                    notificationStore.add(
+                            mechanicUserId,
+                            "ADDITIONAL_SERVICE",
+                            "Customer rejected additional service",
+                            "The customer rejected " + serviceName + " (₹" + amount
+                                    + ") for booking #" + bookingId + ". Do not perform this service.");
+                }
+            }
             default ->
                 log.warn("⚠️ Unknown notification event type: {}", routingKey);
         }

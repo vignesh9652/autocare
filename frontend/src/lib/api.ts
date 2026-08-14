@@ -3,6 +3,8 @@ import { queryClient } from './query-client';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   AuthResponse,
+  AdditionalServiceCreateRequest,
+  AdditionalServiceResponse,
   BookingRequest,
   BookingResponse,
   BookingStatus,
@@ -189,6 +191,20 @@ export const paymentApi = {
     api.post<VerifyPaymentResponse>('/api/payments/verify', data).then((r) => r.data),
   getMine: () => api.get<PaymentResponse[]>('/api/payments').then((r) => r.data),
   getAll: () => api.get<PaymentResponse[]>('/api/payments/admin/all').then((r) => r.data),
+};
+
+// ─── Additional services / vehicle inspection ──────────────────────────────
+export const additionalServiceApi = {
+  /** Mechanic raises an additional-service request (price resolved server-side). */
+  create: (data: AdditionalServiceCreateRequest) =>
+    api.post<AdditionalServiceResponse>('/api/additional-services', data).then((r) => r.data),
+  /** Requests for one booking — customer, assigned mechanic or admin. */
+  getByBooking: (bookingId: number) =>
+    api.get<AdditionalServiceResponse[]>(`/api/additional-services/booking/${bookingId}`).then((r) => r.data),
+  /** Admin: every request across all bookings. */
+  getAllAdmin: () => api.get<AdditionalServiceResponse[]>('/api/additional-services/admin/all').then((r) => r.data),
+  approve: (id: number) => api.post<AdditionalServiceResponse>(`/api/additional-services/${id}/approve`).then((r) => r.data),
+  reject: (id: number) => api.post<AdditionalServiceResponse>(`/api/additional-services/${id}/reject`).then((r) => r.data),
 };
 
 // ─── Service catalogue (platform-controlled prices) ────────────────────────

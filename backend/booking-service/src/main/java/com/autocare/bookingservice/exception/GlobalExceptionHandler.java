@@ -68,6 +68,14 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(AdditionalServiceNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleAdditionalServiceNotFound(
+            AdditionalServiceNotFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgument(
             IllegalArgumentException ex) {

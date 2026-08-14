@@ -26,6 +26,11 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY_BOOKING_COMPLETED = "booking.completed";
     public static final String ROUTING_KEY_BOOKING_PAID = "booking.paid";
 
+    // Published by this service for the additional-service (inspection) flow
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_REQUESTED = "additional-service.requested";
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_APPROVED = "additional-service.approved";
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_REJECTED = "additional-service.rejected";
+
     // Consumed by this service (published by payment-service)
     public static final String ROUTING_KEY_PAYMENT_INITIATED = "payment.initiated";
     public static final String ROUTING_KEY_PAYMENT_SUCCESS = "payment.success";

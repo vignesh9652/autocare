@@ -7,12 +7,15 @@ import com.autocare.bookingservice.dto.BookingCreatedEvent;
 import com.autocare.bookingservice.dto.BookingPaidEvent;
 import com.autocare.bookingservice.dto.BookingRequest;
 import com.autocare.bookingservice.dto.BookingResponse;
+import com.autocare.bookingservice.entity.AdditionalServiceRequest;
+import com.autocare.bookingservice.entity.AdditionalServiceStatus;
 import com.autocare.bookingservice.entity.Booking;
 import com.autocare.bookingservice.entity.BookingStatus;
 import com.autocare.bookingservice.exception.BookingNotFoundException;
 import com.autocare.bookingservice.exception.BookingNotOwnedException;
 import com.autocare.bookingservice.exception.InvalidStatusTransitionException;
 import com.autocare.bookingservice.exception.NoAvailableMechanicException;
+import com.autocare.bookingservice.repository.AdditionalServiceRequestRepository;
 import com.autocare.bookingservice.repository.BookingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +41,9 @@ class BookingServiceTest {
 
     @Mock
     private BookingRepository bookingRepository;
+
+    @Mock
+    private AdditionalServiceRequestRepository additionalServiceRequestRepository;
 
     @Mock
     private VehicleServiceClient vehicleServiceClient;
@@ -70,8 +76,9 @@ class BookingServiceTest {
     @BeforeEach
     void setUp() {
         eventPublisher = new BookingEventPublisher();
-        bookingService = new BookingService(bookingRepository, vehicleServiceClient,
-                mechanicServiceClient, serviceCatalogService, rabbitTemplate, eventPublisher);
+        bookingService = new BookingService(bookingRepository, additionalServiceRequestRepository,
+                vehicleServiceClient, mechanicServiceClient, serviceCatalogService,
+                rabbitTemplate, eventPublisher);
 
         request = new BookingRequest();
         request.setVehicleId(vehicleId);
@@ -514,6 +521,92 @@ class BookingServiceTest {
         assertThrows(InvalidStatusTransitionException.class,
                 () -> bookingService.updateBookingStatus(
                         bookingId, BookingStatus.ACCEPTED, mechanicUserId, "MECHANIC"));
+    }
+
+    // ─── ADDITIONAL SERVICES — COMPLETION GUARD + FINAL AMOUNT ────────────
+
+    @Test
+    void mechanic_CannotComplete_WhileAdditionalServiceRequestIsPending() {
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        // An additional-service request is still awaiting the customer
+        when(additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                bookingId, AdditionalServiceStatus.PENDING)).thenReturn(true);
+
+        assertThrows(InvalidStatusTransitionException.class,
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC"));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void mechanic_CanComplete_OnceAllRequestsAreResolved() {
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        // No PENDING request → completion is allowed
+        when(additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                bookingId, AdditionalServiceStatus.PENDING)).thenReturn(false);
+        when(additionalServiceRequestRepository.findByBookingIdOrderByCreatedAtDesc(bookingId))
+                .thenReturn(List.of());
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC");
+
+        assertEquals(BookingStatus.COMPLETED, response.getStatus());
+    }
+
+    @Test
+    void complete_WithApprovedAdditionalService_ShouldIncludeItInFinalAmount() {
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        booking.setEstimatedAmount(new BigDecimal("500.00"));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        when(additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                bookingId, AdditionalServiceStatus.PENDING)).thenReturn(false);
+
+        AdditionalServiceRequest approved = new AdditionalServiceRequest(
+                bookingId, mechanicId, mechanicUserId, userId, 5L,
+                "Brake Pad Replacement", "Worn out", new BigDecimal("800.00"));
+        approved.setStatus(AdditionalServiceStatus.APPROVED);
+        when(additionalServiceRequestRepository.findByBookingIdOrderByCreatedAtDesc(bookingId))
+                .thenReturn(List.of(approved));
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC");
+
+        assertEquals(0, new BigDecimal("800.00").compareTo(response.getAdditionalAmount()));
+        assertEquals(0, new BigDecimal("1300.00").compareTo(response.getFinalAmount()));
+    }
+
+    @Test
+    void complete_WithRejectedAdditionalService_ShouldExcludeItFromFinalAmount() {
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        booking.setEstimatedAmount(new BigDecimal("500.00"));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId)).thenReturn(mechanicId);
+        when(additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                bookingId, AdditionalServiceStatus.PENDING)).thenReturn(false);
+
+        AdditionalServiceRequest rejected = new AdditionalServiceRequest(
+                bookingId, mechanicId, mechanicUserId, userId, 5L,
+                "Brake Pad Replacement", "Worn out", new BigDecimal("800.00"));
+        rejected.setStatus(AdditionalServiceStatus.REJECTED);
+        when(additionalServiceRequestRepository.findByBookingIdOrderByCreatedAtDesc(bookingId))
+                .thenReturn(List.of(rejected));
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.COMPLETED, mechanicUserId, "MECHANIC");
+
+        assertEquals(0, new BigDecimal("0.00").compareTo(response.getAdditionalAmount()));
+        assertEquals(0, new BigDecimal("500.00").compareTo(response.getFinalAmount()));
     }
 
     // ─── UPDATE STATUS — ADMIN ─────────────────────────────────────────

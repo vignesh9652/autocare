@@ -18,6 +18,8 @@ public class BookingResponse {
     private Double latitude;
     private Double longitude;
     private BigDecimal estimatedAmount;
+    /** Sum of APPROVED additional services (0 when none). */
+    private BigDecimal additionalAmount;
     private BigDecimal finalAmount;
     private BigDecimal platformCommission;
     private BigDecimal mechanicEarning;
@@ -32,7 +34,7 @@ public class BookingResponse {
                            BigDecimal estimatedAmount, LocalDateTime createdAt) {
         this(id, userId, vehicleId, mechanicId, serviceType, status,
                 scheduledAt, address, null, null, estimatedAmount,
-                null, null, null, createdAt);
+                null, null, null, null, createdAt);
     }
 
     public BookingResponse(Long id, Long userId, Long vehicleId, Long mechanicId,
@@ -42,7 +44,7 @@ public class BookingResponse {
                            BigDecimal estimatedAmount, LocalDateTime createdAt) {
         this(id, userId, vehicleId, mechanicId, serviceType, status,
                 scheduledAt, address, latitude, longitude, estimatedAmount,
-                null, null, null, createdAt);
+                null, null, null, null, createdAt);
     }
 
     public BookingResponse(Long id, Long userId, Long vehicleId, Long mechanicId,
@@ -50,6 +52,7 @@ public class BookingResponse {
                            LocalDateTime scheduledAt, String address,
                            Double latitude, Double longitude,
                            BigDecimal estimatedAmount,
+                           BigDecimal additionalAmount,
                            BigDecimal finalAmount,
                            BigDecimal platformCommission,
                            BigDecimal mechanicEarning,
@@ -65,6 +68,7 @@ public class BookingResponse {
         this.latitude = latitude;
         this.longitude = longitude;
         this.estimatedAmount = estimatedAmount;
+        this.additionalAmount = additionalAmount;
         this.finalAmount = finalAmount;
         this.platformCommission = platformCommission;
         this.mechanicEarning = mechanicEarning;
@@ -157,6 +161,14 @@ public class BookingResponse {
 
     public void setEstimatedAmount(BigDecimal estimatedAmount) {
         this.estimatedAmount = estimatedAmount;
+    }
+
+    public BigDecimal getAdditionalAmount() {
+        return additionalAmount;
+    }
+
+    public void setAdditionalAmount(BigDecimal additionalAmount) {
+        this.additionalAmount = additionalAmount;
     }
 
     public BigDecimal getFinalAmount() {

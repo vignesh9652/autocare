@@ -4,12 +4,14 @@ import com.autocare.bookingservice.client.MechanicServiceClient;
 import com.autocare.bookingservice.client.VehicleServiceClient;
 import com.autocare.bookingservice.config.RabbitMQConfig;
 import com.autocare.bookingservice.dto.*;
+import com.autocare.bookingservice.entity.AdditionalServiceStatus;
 import com.autocare.bookingservice.entity.Booking;
 import com.autocare.bookingservice.entity.BookingStatus;
 import com.autocare.bookingservice.exception.BookingNotFoundException;
 import com.autocare.bookingservice.exception.BookingNotOwnedException;
 import com.autocare.bookingservice.exception.InvalidStatusTransitionException;
 import com.autocare.bookingservice.exception.NoAvailableMechanicException;
+import com.autocare.bookingservice.repository.AdditionalServiceRequestRepository;
 import com.autocare.bookingservice.repository.BookingRepository;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class BookingService {
             org.slf4j.LoggerFactory.getLogger(BookingService.class);
 
     private final BookingRepository bookingRepository;
+    private final AdditionalServiceRequestRepository additionalServiceRequestRepository;
     private final VehicleServiceClient vehicleServiceClient;
     private final MechanicServiceClient mechanicServiceClient;
     private final ServiceCatalogService serviceCatalogService;
@@ -34,12 +37,14 @@ public class BookingService {
     private final BookingEventPublisher eventPublisher;
 
     public BookingService(BookingRepository bookingRepository,
+                          AdditionalServiceRequestRepository additionalServiceRequestRepository,
                           VehicleServiceClient vehicleServiceClient,
                           MechanicServiceClient mechanicServiceClient,
                           ServiceCatalogService serviceCatalogService,
                           RabbitTemplate rabbitTemplate,
                           BookingEventPublisher eventPublisher) {
         this.bookingRepository = bookingRepository;
+        this.additionalServiceRequestRepository = additionalServiceRequestRepository;
         this.vehicleServiceClient = vehicleServiceClient;
         this.mechanicServiceClient = mechanicServiceClient;
         this.serviceCatalogService = serviceCatalogService;
@@ -168,12 +173,16 @@ public class BookingService {
 
         booking.setStatus(newStatus);
 
-        // Service completed → generate the final amount (MVP: equals the
-        // estimate; an inspection could later adjust it).
+        // Service completed → generate the final amount: original estimate +
+        // the sum of APPROVED additional services (rejected/pending never
+        // count). Rejected requests are intentionally excluded.
         if (newStatus == BookingStatus.COMPLETED && booking.getFinalAmount() == null) {
-            booking.setFinalAmount(booking.getEstimatedAmount() != null
+            BigDecimal additional = approvedAdditionalAmount(booking.getId());
+            booking.setAdditionalAmount(additional);
+            BigDecimal estimated = booking.getEstimatedAmount() != null
                     ? booking.getEstimatedAmount()
-                    : BigDecimal.ZERO);
+                    : BigDecimal.ZERO;
+            booking.setFinalAmount(estimated.add(additional));
         }
 
         booking = bookingRepository.save(booking);
@@ -234,7 +243,18 @@ public class BookingService {
             boolean valid = switch (booking.getStatus()) {
                 case PENDING -> newStatus == BookingStatus.ACCEPTED || newStatus == BookingStatus.REJECTED;
                 case ACCEPTED -> newStatus == BookingStatus.IN_PROGRESS;
-                case IN_PROGRESS -> newStatus == BookingStatus.COMPLETED;
+                case IN_PROGRESS -> {
+                    // No surprise billing: the job can only be completed once
+                    // every additional-service request has been decided.
+                    if (newStatus == BookingStatus.COMPLETED
+                            && additionalServiceRequestRepository.existsByBookingIdAndStatus(
+                                    booking.getId(), AdditionalServiceStatus.PENDING)) {
+                        throw new InvalidStatusTransitionException(
+                                "Cannot complete the service — waiting for the customer's response "
+                                        + "on additional service request(s)");
+                    }
+                    yield newStatus == BookingStatus.COMPLETED;
+                }
                 case COMPLETED, PAYMENT_PENDING, PAID, CANCELLED, REJECTED -> false;
             };
             if (!valid) {
@@ -388,6 +408,16 @@ public class BookingService {
         return toResponse(booking);
     }
 
+    /** Sum of APPROVED additional-service amounts for the booking. */
+    private BigDecimal approvedAdditionalAmount(Long bookingId) {
+        return additionalServiceRequestRepository
+                .findByBookingIdOrderByCreatedAtDesc(bookingId)
+                .stream()
+                .filter(r -> r.getStatus() == AdditionalServiceStatus.APPROVED)
+                .map(r -> r.getAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     /** commission = finalAmount × percentage / 100 (rounded to 2dp). */
     private BigDecimal commissionOf(BigDecimal finalAmount) {
         BigDecimal percentage = serviceCatalogService.currentCommissionPercentage();
@@ -408,6 +438,7 @@ public class BookingService {
                 booking.getLatitude(),
                 booking.getLongitude(),
                 booking.getEstimatedAmount(),
+                booking.getAdditionalAmount(),
                 booking.getFinalAmount(),
                 booking.getPlatformCommission(),
                 booking.getMechanicEarning(),

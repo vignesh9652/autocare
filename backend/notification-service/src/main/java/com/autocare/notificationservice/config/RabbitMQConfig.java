@@ -23,6 +23,9 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY_BOOKING_COMPLETED = "booking.completed";
     public static final String ROUTING_KEY_PAYMENT_SUCCESS = "payment.success";
     public static final String ROUTING_KEY_PAYMENT_FAILED = "payment.failed";
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_REQUESTED = "additional-service.requested";
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_APPROVED = "additional-service.approved";
+    public static final String ROUTING_KEY_ADDITIONAL_SERVICE_REJECTED = "additional-service.rejected";
 
     /**
      * Declare the same topic exchange that booking-service and payment-service
@@ -83,6 +86,33 @@ public class RabbitMQConfig {
                 .bind(notificationQueue)
                 .to(exchange)
                 .with(ROUTING_KEY_PAYMENT_FAILED);
+    }
+
+    /**
+     * Bind the queue to receive additional-service (inspection) events.
+     */
+    @Bean
+    public Binding additionalServiceRequestedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_ADDITIONAL_SERVICE_REQUESTED);
+    }
+
+    @Bean
+    public Binding additionalServiceApprovedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_ADDITIONAL_SERVICE_APPROVED);
+    }
+
+    @Bean
+    public Binding additionalServiceRejectedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_ADDITIONAL_SERVICE_REJECTED);
     }
 
     /**

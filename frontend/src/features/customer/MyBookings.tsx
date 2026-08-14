@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { CalendarCheck, XCircle, CreditCard, MapPin, Star, Receipt, BadgeCheck } from 'lucide-react';
-import { bookingApi, mechanicApi, getErrorMessage } from '@/lib/api';
+import { CalendarCheck, XCircle, CreditCard, MapPin, Star, Receipt, BadgeCheck, Wrench, Check, X, ShieldAlert } from 'lucide-react';
+import { additionalServiceApi, bookingApi, mechanicApi, getErrorMessage } from '@/lib/api';
 import { toast } from '@/stores/toast-store';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -99,12 +99,21 @@ export function MyBookings() {
                     <p className="mb-1 text-xs font-semibold uppercase text-ink-400">Address</p>
                     <p className="text-sm text-ink-700 dark:text-ink-300">{b.address}</p>
 
+                    {/* Additional services (vehicle inspection) — approval required */}
+                    <AdditionalRequests bookingId={b.id} estimatedAmount={b.estimatedAmount} />
+
                     {/* Money summary */}
                     <div className="mt-4 space-y-1.5 rounded-xl bg-ink-50 p-4 text-sm dark:bg-ink-800/50">
                       <div className="flex justify-between text-ink-600 dark:text-ink-300">
                         <span>Estimated amount</span>
                         <span className="font-semibold text-ink-900 dark:text-ink-100">{formatCurrency(b.estimatedAmount)}</span>
                       </div>
+                      {(b.additionalAmount != null && b.additionalAmount > 0) && (
+                        <div className="flex justify-between text-ink-600 dark:text-ink-300">
+                          <span>Approved additional services</span>
+                          <span className="font-semibold text-ink-900 dark:text-ink-100">{formatCurrency(b.additionalAmount)}</span>
+                        </div>
+                      )}
                       {b.finalAmount != null && (
                         <div className="flex justify-between text-ink-600 dark:text-ink-300">
                           <span>Final amount (after inspection)</span>
@@ -153,6 +162,109 @@ export function MyBookings() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Additional-service requests for a booking. PENDING requests must be
+ * approved or rejected by the customer before the mechanic can complete the
+ * job — "no surprise billing".
+ */
+function AdditionalRequests({ bookingId, estimatedAmount }: { bookingId: number; estimatedAmount: number | null }) {
+  const qc = useQueryClient();
+  const { data: requests } = useQuery({
+    queryKey: ['additional-services', bookingId],
+    queryFn: () => additionalServiceApi.getByBooking(bookingId),
+    refetchInterval: 15_000,
+  });
+
+  const decide = useMutation({
+    mutationFn: ({ id, action }: { id: number; action: 'approve' | 'reject' }) =>
+      action === 'approve' ? additionalServiceApi.approve(id) : additionalServiceApi.reject(id),
+    onSuccess: (_d, v) => {
+      toast(v.action === 'approve' ? 'Additional service approved' : 'Additional service rejected', 'success');
+      void qc.invalidateQueries({ queryKey: ['additional-services', bookingId] });
+      void qc.invalidateQueries({ queryKey: ['my-bookings'] });
+    },
+    onError: (err) => toast(getErrorMessage(err), 'error'),
+  });
+
+  const list = requests ?? [];
+  if (list.length === 0) return null;
+
+  const base = estimatedAmount ?? 0;
+  const approved = list.filter((r) => r.status === 'APPROVED').reduce((sum, r) => sum + r.amount, 0);
+  const pendingSum = list.filter((r) => r.status === 'PENDING').reduce((sum, r) => sum + r.amount, 0);
+  const projectedTotal = base + approved + pendingSum;
+  const hasPending = list.some((r) => r.status === 'PENDING');
+
+  return (
+    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/25 dark:bg-amber-500/5">
+      <div className="flex items-center gap-2">
+        <Wrench className="h-4 w-4 text-brand-500" />
+        <p className="text-sm font-bold text-ink-900 dark:text-ink-100">Recommended Additional Services</p>
+      </div>
+
+      {hasPending && (
+        <p className="mt-2 flex items-start gap-1.5 text-[11px] font-medium leading-relaxed text-amber-700 dark:text-amber-300">
+          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          Your approval is required before this additional work is performed. Rejected services are never charged.
+        </p>
+      )}
+
+      <div className="mt-3 space-y-2">
+        {list.map((r) => (
+          <div key={r.id} className="rounded-xl bg-white px-3 py-2.5 dark:bg-ink-800/60">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink-900 dark:text-ink-100">{r.serviceName}</p>
+                <p className="text-xs text-ink-500">{formatCurrency(r.amount)}{r.reason ? ` · ${r.reason}` : ''}</p>
+              </div>
+              <StatusBadge kind="additional" status={r.status} />
+            </div>
+            {r.status === 'PENDING' && (
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" onClick={() => decide.mutate({ id: r.id, action: 'approve' })} loading={decide.isPending}>
+                  <Check className="h-4 w-4" /> Approve Additional Service
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => decide.mutate({ id: r.id, action: 'reject' })}>
+                  <X className="h-4 w-4" /> Reject
+                </Button>
+              </div>
+            )}
+            {r.status === 'APPROVED' && (
+              <p className="mt-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">Approved — the mechanic can now perform this service.</p>
+            )}
+            {r.status === 'REJECTED' && (
+              <p className="mt-1.5 text-[11px] font-medium text-ink-400">Rejected — this service will not be performed or charged.</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 space-y-1 rounded-xl bg-white/70 p-3 text-xs dark:bg-ink-900/50">
+        <div className="flex justify-between text-ink-600 dark:text-ink-300">
+          <span>Original estimate</span>
+          <span className="font-semibold">{formatCurrency(base)}</span>
+        </div>
+        {approved > 0 && (
+          <div className="flex justify-between text-ink-600 dark:text-ink-300">
+            <span>Approved additional</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">+ {formatCurrency(approved)}</span>
+          </div>
+        )}
+        {hasPending && (
+          <div className="flex justify-between text-ink-600 dark:text-ink-300">
+            <span>Pending approval</span>
+            <span className="font-semibold text-amber-600 dark:text-amber-400">+ {formatCurrency(pendingSum)}</span>
+          </div>
+        )}
+        <div className="flex justify-between border-t border-ink-200 pt-1.5 font-bold text-ink-900 dark:border-ink-700 dark:text-ink-100">
+          <span>New estimated total</span>
+          <span className="text-brand-600 dark:text-brand-400">{formatCurrency(projectedTotal)}</span>
+        </div>
+      </div>
     </div>
   );
 }

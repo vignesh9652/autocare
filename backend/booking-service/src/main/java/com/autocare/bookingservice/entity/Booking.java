@@ -45,7 +45,11 @@ public class Booking {
     @Column(precision = 10, scale = 2)
     private BigDecimal estimatedAmount;
 
-    /** Final amount after inspection — normally equals estimatedAmount (MVP). */
+    /** Sum of APPROVED additional-service requests (set/recomputed on decisions). */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal additionalAmount;
+
+    /** Final amount after inspection = estimatedAmount + approved additional. */
     @Column(precision = 10, scale = 2)
     private BigDecimal finalAmount;
 
@@ -173,6 +177,14 @@ public class Booking {
 
     public void setEstimatedAmount(BigDecimal estimatedAmount) {
         this.estimatedAmount = estimatedAmount;
+    }
+
+    public BigDecimal getAdditionalAmount() {
+        return additionalAmount;
+    }
+
+    public void setAdditionalAmount(BigDecimal additionalAmount) {
+        this.additionalAmount = additionalAmount;
     }
 
     public BigDecimal getFinalAmount() {

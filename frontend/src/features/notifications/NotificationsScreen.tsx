@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Bell, CheckCheck, Info, AlertTriangle, type LucideIcon } from 'lucide-react';
+import { Bell, CheckCheck, Info, AlertTriangle, Wrench, type LucideIcon } from 'lucide-react';
 import { useNotifications, useMarkAllRead, useMarkRead } from '@/hooks/use-notifications';
 import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +12,7 @@ const ICONS: Record<string, LucideIcon> = {
   REVIEW: Info,
   ACCOUNT: AlertTriangle,
   SYSTEM: Info,
+  ADDITIONAL_SERVICE: Wrench,
 };
 
 export function NotificationsScreen() {

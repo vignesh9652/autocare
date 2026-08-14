@@ -66,6 +66,12 @@ spring:
           predicates:
             - Path=/api/services/**
 
+        # Additional Services / Vehicle Inspection (owned by booking-service)
+        - id: booking-service-additional-services
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/additional-services/**
+
         # Payment Service
         - id: payment-service
           uri: lb://PAYMENT-SERVICE
