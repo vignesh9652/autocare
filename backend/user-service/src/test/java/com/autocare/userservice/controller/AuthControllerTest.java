@@ -7,6 +7,7 @@ import com.autocare.userservice.entity.Role;
 import com.autocare.userservice.entity.User;
 import com.autocare.userservice.repository.UserRepository;
 import com.autocare.userservice.security.SecurityConfig;
+import com.autocare.userservice.service.OtpService;
 import com.autocare.userservice.util.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -44,14 +45,17 @@ class AuthControllerTest {
     @MockBean
     private JwtUtil jwtUtil;
 
+    @MockBean
+    private OtpService otpService;
+
     @Test
     void register_ShouldReturn201() throws Exception {
-        RegisterRequest request = new RegisterRequest("Test User", "test@example.com", "password123", "1234567890");
+        RegisterRequest request = new RegisterRequest("Test User", "test@example.com", "password123", "9876543210");
 
         when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encoded-pass");
 
-        User savedUser = new User("Test User", "test@example.com", "encoded-pass", "1234567890", Role.CUSTOMER);
+        User savedUser = new User("Test User", "test@example.com", "encoded-pass", "9876543210", Role.CUSTOMER);
         savedUser.setId(1L);
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
@@ -69,7 +73,7 @@ class AuthControllerTest {
 
     @Test
     void register_WithDuplicateEmail_ShouldReturn409() throws Exception {
-        RegisterRequest request = new RegisterRequest("Test User", "existing@example.com", "password123", "1234567890");
+        RegisterRequest request = new RegisterRequest("Test User", "existing@example.com", "password123", "9876543210");
 
         when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
@@ -96,7 +100,7 @@ class AuthControllerTest {
     void login_ShouldReturn200() throws Exception {
         LoginRequest request = new LoginRequest("test@example.com", "password123");
 
-        User user = new User("Test User", "test@example.com", "encoded-pass", "1234567890", Role.CUSTOMER);
+        User user = new User("Test User", "test@example.com", "encoded-pass", "9876543210", Role.CUSTOMER);
         user.setId(1L);
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
@@ -115,7 +119,7 @@ class AuthControllerTest {
     void login_WithInvalidCredentials_ShouldReturn401() throws Exception {
         LoginRequest request = new LoginRequest("test@example.com", "wrongpassword");
 
-        User user = new User("Test User", "test@example.com", "encoded-pass", "1234567890", Role.CUSTOMER);
+        User user = new User("Test User", "test@example.com", "encoded-pass", "9876543210", Role.CUSTOMER);
         user.setId(1L);
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
@@ -131,12 +135,12 @@ class AuthControllerTest {
     @Test
     void register_AsMechanic_ShouldCreatePendingAccount() throws Exception {
         RegisterRequest request = new RegisterRequest(
-                "Mech One", "mech@example.com", "password123", "1234567890", Role.MECHANIC);
+                "Mech One", "mech@example.com", "password123", "9876543210", Role.MECHANIC);
 
         when(userRepository.existsByEmail("mech@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("encoded-pass");
 
-        User savedUser = new User("Mech One", "mech@example.com", "encoded-pass", "1234567890", Role.MECHANIC);
+        User savedUser = new User("Mech One", "mech@example.com", "encoded-pass", "9876543210", Role.MECHANIC);
         savedUser.setStatus(AccountStatus.PENDING);
         savedUser.setId(2L);
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -153,7 +157,7 @@ class AuthControllerTest {
     @Test
     void register_AsAdmin_ShouldReturn400() throws Exception {
         RegisterRequest request = new RegisterRequest(
-                "Hacker", "admin@example.com", "password123", "1234567890", Role.ADMIN);
+                "Hacker", "admin@example.com", "password123", "9876543210", Role.ADMIN);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -166,7 +170,7 @@ class AuthControllerTest {
     void login_WithPendingMechanic_ShouldReturn403() throws Exception {
         LoginRequest request = new LoginRequest("mech@example.com", "password123");
 
-        User user = new User("Mech One", "mech@example.com", "encoded-pass", "1234567890", Role.MECHANIC);
+        User user = new User("Mech One", "mech@example.com", "encoded-pass", "9876543210", Role.MECHANIC);
         user.setStatus(AccountStatus.PENDING);
         user.setId(2L);
 
