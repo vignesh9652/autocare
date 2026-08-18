@@ -44,6 +44,22 @@ public class PaymentController {
     }
 
     /**
+     * Creates a Razorpay order for a spare-part purchase. The amount is resolved
+     * server-side from the order's totalAmount — the client only sends the order
+     * id and its JWT.
+     */
+    @PostMapping("/create-spare-part-order")
+    public ResponseEntity<CreateSparePartOrderResponse> createSparePartOrder(
+            @Valid @RequestBody CreateSparePartOrderRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        CreateSparePartOrderResponse response =
+                razorpayPaymentService.createSparePartOrder(userId, request.getOrderId(), authHeader);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
      * Verifies the Razorpay signature returned by the Checkout SDK, marks the
      * payment SUCCESS and notifies booking-service (booking → PAID, commission
      * + mechanic earning recorded). Idempotent for already-finalized payments.

@@ -1,7 +1,7 @@
-target/
-*.iml
+*.log
+.git
+.gitignore
 .idea/
 .mvn/
 mvnw
 mvnw.cmd
-*.log

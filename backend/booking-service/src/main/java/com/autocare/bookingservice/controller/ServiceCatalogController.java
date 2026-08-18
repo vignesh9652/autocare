@@ -2,6 +2,8 @@ package com.autocare.bookingservice.controller;
 
 import com.autocare.bookingservice.dto.CommissionConfigRequest;
 import com.autocare.bookingservice.dto.CommissionConfigResponse;
+import com.autocare.bookingservice.dto.InstallationFeeConfigRequest;
+import com.autocare.bookingservice.dto.InstallationFeeConfigResponse;
 import com.autocare.bookingservice.dto.ServiceRequest;
 import com.autocare.bookingservice.dto.ServiceResponse;
 import com.autocare.bookingservice.service.ServiceCatalogService;
@@ -16,8 +18,8 @@ import java.util.List;
  * Platform service catalogue.
  *
  * <ul>
- *   <li>{@code GET /api/services} — active services for authenticated users
- *       (customers pick from these when booking).</li>
+ *   <li>{@code GET /api/services} — public listing of active services
+ *       (landing page + customers picking services when booking).</li>
  *   <li>{@code /api/services/admin/**} — ADMIN-only management of prices,
  *       active flags and the platform commission percentage.</li>
  * </ul>
@@ -67,5 +69,17 @@ public class ServiceCatalogController {
     public ResponseEntity<CommissionConfigResponse> updateCommissionConfig(
             @Valid @RequestBody CommissionConfigRequest request) {
         return ResponseEntity.ok(serviceCatalogService.updateCommissionConfig(request));
+    }
+
+    /** Spare-part installation fee (₹) — admin configurable. */
+    @GetMapping("/admin/installation-fee")
+    public ResponseEntity<InstallationFeeConfigResponse> getInstallationFee() {
+        return ResponseEntity.ok(serviceCatalogService.getInstallationFeeConfig());
+    }
+
+    @PutMapping("/admin/installation-fee")
+    public ResponseEntity<InstallationFeeConfigResponse> updateInstallationFee(
+            @Valid @RequestBody InstallationFeeConfigRequest request) {
+        return ResponseEntity.ok(serviceCatalogService.updateInstallationFeeConfig(request));
     }
 }

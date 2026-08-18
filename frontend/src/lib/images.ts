@@ -39,9 +39,11 @@ export const SERVICE_IMAGES: Record<string, string> = {
   'Battery Check': u('photo-1552519507-da3b142c6e3d'),
 };
 
+// Generic workshop shot used for catalogue services without a dedicated image.
+export const SERVICE_FALLBACK = u('photo-1486262715619-67b85e0b08d3');
+
 export const HOW_IT_WORKS_IMG = u('photo-1558618666-fcd25c85cd64');
 export const TRUST_IMG = u('photo-1635776062127-d379bfcba9f8', 1200); // mechanic at work
-export const TESTIMONIAL_AVATAR = u('photo-1472099645785-5658abf4ff4e', 120);
 
 // ─── Auth page backgrounds ──────────────────────────────────────────────────
 export const LOGIN_BG = u('photo-1486262715619-67b85e0b08d3', 1920); // garage bay with a car on a lift

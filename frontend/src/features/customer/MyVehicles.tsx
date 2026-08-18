@@ -11,7 +11,7 @@ import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/Feedback';
 
-const TYPES: VehicleType[] = ['CAR', 'SEDAN', 'SUV', 'HATCHBACK', 'TRUCK', 'VAN', 'BIKE', 'MOTORCYCLE'];
+const TYPES: VehicleType[] = ['CAR', 'BIKE'];
 
 const emptyForm = { make: '', model: '', year: new Date().getFullYear(), registrationNumber: '', vehicleType: 'CAR' as VehicleType };
 

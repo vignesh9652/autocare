@@ -30,6 +30,9 @@ public class SparePartService {
         );
         part.setTutorialVideoUrl(request.getTutorialVideoUrl());
         part.setInstallationSteps(request.getInstallationSteps());
+        if (request.getMechanicInstallationAvailable() != null) {
+            part.setMechanicInstallationAvailable(request.getMechanicInstallationAvailable());
+        }
 
         part = sparePartRepository.save(part);
         return toResponse(part);
@@ -82,6 +85,7 @@ public class SparePartService {
                 part.getImageUrl(),
                 part.getTutorialVideoUrl(),
                 part.getInstallationSteps(),
+                part.isMechanicInstallationAvailable(),
                 part.getCreatedAt()
         );
     }

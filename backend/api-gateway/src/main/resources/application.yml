@@ -72,6 +72,12 @@ spring:
           predicates:
             - Path=/api/additional-services/**
 
+        # Wallets / money distribution (owned by booking-service)
+        - id: booking-service-wallet
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/wallet/**
+
         # Payment Service
         - id: payment-service
           uri: lb://PAYMENT-SERVICE
@@ -84,11 +90,24 @@ spring:
           predicates:
             - Path=/api/parts/**
 
+        # Spare part orders (owned by spareparts-service)
+        - id: spareparts-orders
+          uri: lb://SPAREPARTS-SERVICE
+          predicates:
+            - Path=/api/orders/**
+
         # Recommendations (also routed to spareparts-service)
         - id: spareparts-recommendations
           uri: lb://SPAREPARTS-SERVICE
           predicates:
             - Path=/api/recommendations/**
+
+        # DIY guide management (owned by spareparts-service). Declared before
+        # the admin-service catch-all so /api/admin/diy-guides/** lands here.
+        - id: spareparts-diy-admin
+          uri: lb://SPAREPARTS-SERVICE
+          predicates:
+            - Path=/api/admin/diy-guides/**
 
         # Review Service
         - id: review-service

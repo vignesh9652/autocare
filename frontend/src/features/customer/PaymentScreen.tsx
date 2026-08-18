@@ -123,7 +123,7 @@ export function PaymentScreen() {
         description: `${booking.serviceType} · Booking #${booking.id}`,
         order_id: order.razorpayOrderId,
         prefill: user?.name ? { name: user.name } : undefined,
-        theme: { color: '#f97316' },
+        theme: { color: '#f59e0b' },
         handler: async (response) => {
           // 3. Customer paid — verify the signature on the backend
           paymentSubmittedRef.current = true;

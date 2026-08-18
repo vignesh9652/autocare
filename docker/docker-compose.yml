@@ -233,6 +233,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/spareparts_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: Vignesh@2004
+      # Consumes payment.success events (spare-part orders) and publishes
+      # spare-part-order.delivered — must point at the RabbitMQ container.
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       # Cap JVM heap - default sizing OOMs on Docker Desktop's small VM
@@ -247,6 +251,8 @@ services:
       start_period: 480s
     depends_on:
       mysql:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       eureka-server:
         condition: service_healthy

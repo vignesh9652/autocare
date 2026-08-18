@@ -44,6 +44,13 @@ public class SparePart {
     @Column(columnDefinition = "TEXT")
     private String installationSteps;
 
+    /**
+     * Whether AutoCare mechanics can be booked to install this part
+     * ("Book a Mechanic" button visibility). Defaults to true.
+     */
+    @Column(nullable = false)
+    private boolean mechanicInstallationAvailable = true;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -145,6 +152,14 @@ public class SparePart {
 
     public void setInstallationSteps(String installationSteps) {
         this.installationSteps = installationSteps;
+    }
+
+    public boolean isMechanicInstallationAvailable() {
+        return mechanicInstallationAvailable;
+    }
+
+    public void setMechanicInstallationAvailable(boolean mechanicInstallationAvailable) {
+        this.mechanicInstallationAvailable = mechanicInstallationAvailable;
     }
 
     public LocalDateTime getCreatedAt() {

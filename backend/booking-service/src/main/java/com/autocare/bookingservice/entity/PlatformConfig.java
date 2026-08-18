@@ -15,6 +15,9 @@ public class PlatformConfig {
 
     public static final String KEY_COMMISSION_PERCENTAGE = "platform.commission.percentage";
 
+    /** Flat fee AutoCare charges for a spare-part installation booking (₹). */
+    public static final String KEY_INSTALLATION_FEE = "platform.installation.fee";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -12,6 +12,10 @@ public class BookingResponse {
     private Long vehicleId;
     private Long mechanicId;
     private String serviceType;
+    /** Spare part to install — set only for SPARE_PART_INSTALLATION bookings. */
+    private Long sparePartId;
+    /** Spare-part order the part was purchased in. */
+    private Long sparePartOrderId;
     private BookingStatus status;
     private LocalDateTime scheduledAt;
     private String address;
@@ -57,11 +61,29 @@ public class BookingResponse {
                            BigDecimal platformCommission,
                            BigDecimal mechanicEarning,
                            LocalDateTime createdAt) {
+        this(id, userId, vehicleId, mechanicId, serviceType, null, null, status,
+                scheduledAt, address, latitude, longitude, estimatedAmount,
+                additionalAmount, finalAmount, platformCommission, mechanicEarning, createdAt);
+    }
+
+    public BookingResponse(Long id, Long userId, Long vehicleId, Long mechanicId,
+                           String serviceType, Long sparePartId, Long sparePartOrderId,
+                           BookingStatus status,
+                           LocalDateTime scheduledAt, String address,
+                           Double latitude, Double longitude,
+                           BigDecimal estimatedAmount,
+                           BigDecimal additionalAmount,
+                           BigDecimal finalAmount,
+                           BigDecimal platformCommission,
+                           BigDecimal mechanicEarning,
+                           LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.vehicleId = vehicleId;
         this.mechanicId = mechanicId;
         this.serviceType = serviceType;
+        this.sparePartId = sparePartId;
+        this.sparePartOrderId = sparePartOrderId;
         this.status = status;
         this.scheduledAt = scheduledAt;
         this.address = address;
@@ -113,6 +135,22 @@ public class BookingResponse {
 
     public void setServiceType(String serviceType) {
         this.serviceType = serviceType;
+    }
+
+    public Long getSparePartId() {
+        return sparePartId;
+    }
+
+    public void setSparePartId(Long sparePartId) {
+        this.sparePartId = sparePartId;
+    }
+
+    public Long getSparePartOrderId() {
+        return sparePartOrderId;
+    }
+
+    public void setSparePartOrderId(Long sparePartOrderId) {
+        this.sparePartOrderId = sparePartOrderId;
     }
 
     public BookingStatus getStatus() {

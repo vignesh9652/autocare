@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import { LogIn, Eye, EyeOff, KeyRound, UserCog, Wrench } from 'lucide-react';
+import { LogIn, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getErrorMessage } from '@/lib/api';
@@ -27,14 +27,9 @@ export function LoginScreen() {
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
   const [showPw, setShowPw] = useState(false);
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
-
-  const fillDemo = (email: string, password: string) => {
-    setValue('email', email, { shouldValidate: true });
-    setValue('password', password, { shouldValidate: true });
-  };
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -84,33 +79,6 @@ export function LoginScreen() {
         Are you a mechanic?{' '}
         <Link to="/register/mechanic" className="font-semibold text-brand-600 hover:text-brand-700">Apply here</Link>
       </p>
-
-      <div className="mt-6 rounded-xl border border-ink-200/80 bg-ink-50/80 p-3 dark:border-ink-800 dark:bg-ink-900/60">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400">Demo accounts</p>
-        <div className="mt-2 space-y-1.5">
-          <button
-            type="button"
-            onClick={() => fillDemo('admin@autocare.com', 'Admin@123')}
-            className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition hover:bg-brand-500/10"
-          >
-            <span className="flex shrink-0 items-center gap-1.5 font-medium text-ink-700 dark:text-ink-200">
-              <UserCog className="h-3.5 w-3.5 text-brand-500" /> Admin
-            </span>
-            <span className="ml-2 min-w-0 truncate text-ink-400">admin@autocare.com / Admin@123</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => fillDemo('demo.mechanic@autocare.com', 'Mechanic@123')}
-            className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition hover:bg-brand-500/10"
-          >
-            <span className="flex shrink-0 items-center gap-1.5 font-medium text-ink-700 dark:text-ink-200">
-              <Wrench className="h-3.5 w-3.5 text-brand-500" /> Mechanic
-            </span>
-            <span className="ml-2 min-w-0 truncate text-ink-400">demo.mechanic@autocare.com / Mechanic@123</span>
-          </button>
-        </div>
-        <p className="mt-2 text-[11px] text-ink-400">Click a row to autofill, then Sign In.</p>
-      </div>
     </AuthShell>
   );
 }

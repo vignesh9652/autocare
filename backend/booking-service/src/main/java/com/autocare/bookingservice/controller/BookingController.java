@@ -3,6 +3,7 @@ package com.autocare.bookingservice.controller;
 import com.autocare.bookingservice.dto.BookingRequest;
 import com.autocare.bookingservice.dto.BookingResponse;
 import com.autocare.bookingservice.dto.BookingStatusUpdateRequest;
+import com.autocare.bookingservice.dto.InstallationBookingRequest;
 import com.autocare.bookingservice.service.BookingEventPublisher;
 import com.autocare.bookingservice.service.BookingService;
 import jakarta.validation.Valid;
@@ -35,6 +36,22 @@ public class BookingController {
             Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         BookingResponse response = bookingService.createBooking(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Books a mechanic to install a spare part (SPARE_PART_INSTALLATION). The
+     * customer's JWT is forwarded so spareparts-service can verify that a
+     * linked order belongs to them.
+     */
+    @PostMapping("/installation")
+    public ResponseEntity<BookingResponse> createInstallationBooking(
+            @Valid @RequestBody InstallationBookingRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        BookingResponse response = bookingService.createInstallationBooking(
+                userId, request, authHeader);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

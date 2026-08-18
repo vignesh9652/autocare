@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import {
-  ArrowLeft,
+import { AnimatePresence, motion } from 'framer-motion';import { ArrowLeft,
   ArrowRight,
   CalendarClock,
   Car,
@@ -23,6 +21,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
+import { LocationPicker, PickedLocation } from '@/components/ui/LocationPicker';
 import { useQuery } from '@tanstack/react-query';
 import { vehicleApi, bookingApi, mechanicApi, serviceApi, getErrorMessage } from '@/lib/api';
 import { assetUrl, BOOKING_BG, mechanicImageUrl } from '@/lib/images';
@@ -81,8 +80,8 @@ export function BookServiceScreen() {
   const [customService, setCustomService] = useState('');
   const [scheduledAt, setScheduledAt] = useState<string>('');
   const [address, setAddress] = useState('');
+  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
   const [preferredSkill, setPreferredSkill] = useState('');
-  const [detecting, setDetecting] = useState(false);
   const [locating, setLocating] = useState(false);
   const [location, setLocation] = useState<CustomerLocation | null>(null);
   const [radius, setRadius] = useState(25);
@@ -138,10 +137,10 @@ export function BookServiceScreen() {
     if (step === 0) return vehicleId !== '';
     if (step === 1) return selectedServices.length > 0;
     if (step === 2) return !!scheduledAt;
-    if (step === 3) return !!location || address.trim().length >= 8;
+    if (step === 3) return !!(pickedLocation || location) || address.trim().length >= 8;
     if (step === 4) return mechanicId !== '';
     return false;
-  }, [step, vehicleId, selectedServices, scheduledAt, address, mechanicId]);
+  }, [step, vehicleId, selectedServices, scheduledAt, address, pickedLocation, location, mechanicId]);
 
   const toggleService = (name: string) => {
     setSelectedServices((prev) =>
@@ -173,26 +172,20 @@ export function BookServiceScreen() {
    * reuses it in both the address step (prefilled GPS text + saved coords)
    * and the mechanic step (distance filtering).
    */
-  const captureLocation = async (source: 'address' | 'mechanic') => {
+  const captureLocation = async () => {
     if (!isGeolocationSupported()) {
       toast('Geolocation is not supported by this browser. Please type your address manually.', 'error');
       return;
     }
-    const setBusy = source === 'address' ? setDetecting : setLocating;
-    setBusy(true);
+    setLocating(true);
     try {
       const loc = await detectLiveLocation();
       setLocation({ latitude: loc.latitude, longitude: loc.longitude, area: loc.area, accuracy: loc.accuracy });
-      if (source === 'address') {
-        setAddress(loc.area);
-        toast(`GPS locked — exact location will be sent with your booking`, 'success');
-      } else {
-        toast(`Finding mechanics near ${loc.area}`, 'success');
-      }
+      toast(`Finding mechanics near ${loc.area}`, 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not detect your location', 'error');
     } finally {
-      setBusy(false);
+      setLocating(false);
     }
   };
 
@@ -218,13 +211,14 @@ export function BookServiceScreen() {
   const submit = async () => {
     setSubmitting(true);
     try {
+      const finalLocation = pickedLocation || location;
       await bookingApi.create({
         vehicleId: vehicleId as number,
         serviceType: selectedServices.join(' + '),
         scheduledAt: new Date(scheduledAt).toISOString(),
-        address,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
+        address: pickedLocation ? (address || pickedLocation.area) : address,
+        latitude: finalLocation?.latitude,
+        longitude: finalLocation?.longitude,
         mechanicId: mechanicId as number,
         preferredSkill: preferredSkill || undefined,
         serviceArea: preferredSkill || undefined,
@@ -467,58 +461,60 @@ export function BookServiceScreen() {
             </motion.div>
           )}
 
-          {/* Step 3 — Address + exact GPS location */}
+          {/* Step 3 — Address + interactive map */}
           {step === 3 && (
             <motion.div key="a" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div className="card space-y-4 p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-4">
+                {/* Interactive map picker */}
+                <LocationPicker
+                  value={pickedLocation}
+                  onChange={setPickedLocation}
+                  height="350px"
+                />
+
+                {/* Address details */}
+                <div className="card space-y-4 p-6">
                   <div className="flex items-center gap-2 text-ink-900 dark:text-ink-100">
                     <MapPin className="h-5 w-5 text-brand-500" />
-                    <h3 className="font-bold">Service location</h3>
+                    <h3 className="font-bold">Service address</h3>
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={() => void captureLocation('address')} loading={detecting}>
-                    <LocateFixed className="h-4 w-4" /> {detecting ? 'Detecting…' : 'Use my current location'}
-                  </Button>
+
+                  {location && !pickedLocation && (
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      <Crosshair className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      <span className="min-w-0 truncate">
+                        GPS locked — <span className="font-mono">{location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setLocation(null)}
+                        className="ml-auto shrink-0 rounded-full p-0.5 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
+                        aria-label="Clear GPS location"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  <Textarea
+                    id="address"
+                    label="Full address (house no, street, landmark, city)"
+                    placeholder="e.g. 42 MG Road, Koramangala, Bangalore"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                  <Input
+                    id="skill"
+                    label="Preferred mechanic skill (optional)"
+                    placeholder="e.g. Engine Specialist"
+                    value={preferredSkill}
+                    onChange={(e) => setPreferredSkill(e.target.value)}
+                  />
+                  <p className="flex items-start gap-1.5 text-[11px] font-medium text-ink-400">
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    Click on the map or drag the pin to set your exact location. The GPS coordinates are sent with the booking so the mechanic can reach you precisely.
+                  </p>
                 </div>
-
-                {location && (
-                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
-                    <Crosshair className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                    <span className="min-w-0 truncate">
-                      GPS locked — <span className="font-mono">{location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</span>
-                    </span>
-                    {location.accuracy != null && (
-                      <span className="shrink-0 text-emerald-600/70 dark:text-emerald-400/70">±{Math.round(location.accuracy)} m</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setLocation(null)}
-                      className="ml-auto shrink-0 rounded-full p-0.5 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
-                      aria-label="Clear GPS location"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-
-                <Textarea
-                  id="address"
-                  label="Full address"
-                  placeholder="House no, street, landmark, city, PIN"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
-                <Input
-                  id="skill"
-                  label="Preferred mechanic skill (optional)"
-                  placeholder="e.g. Engine Specialist"
-                  value={preferredSkill}
-                  onChange={(e) => setPreferredSkill(e.target.value)}
-                />
-                <p className="flex items-start gap-1.5 text-[11px] font-medium text-ink-400">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  When you use your current location, the exact latitude &amp; longitude are sent with the booking so the mechanic can reach you precisely.
-                </p>
               </div>
             </motion.div>
           )}
@@ -532,7 +528,7 @@ export function BookServiceScreen() {
                   <h3 className="font-bold">Choose your mechanic</h3>
                 </div>
                 {!location ? (
-                  <Button variant="outline" size="sm" onClick={() => void captureLocation('mechanic')} loading={locating}>
+                  <Button variant="outline" size="sm" onClick={() => void captureLocation()} loading={locating}>
                     {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
                     {locating ? 'Detecting…' : 'Filter by distance'}
                   </Button>

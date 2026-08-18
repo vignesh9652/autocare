@@ -37,6 +37,13 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/parts/**").permitAll()
                 .requestMatchers("/api/parts/**").authenticated()
+                // Orders: customers place/track their own; admins drive delivery.
+                // The internal status endpoint is service-to-service (no user
+                // context available server-side) and only exposes order status.
+                .requestMatchers("/api/orders/internal/**").permitAll()
+                .requestMatchers("/api/orders/**").authenticated()
+                // DIY guide management is ADMIN-only
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/recommendations/**").authenticated()
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()

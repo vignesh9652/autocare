@@ -65,9 +65,13 @@ class ServiceCatalogControllerTest {
     }
 
     @Test
-    void getActiveServices_WithoutAuth_ShouldReturn401() throws Exception {
+    void getActiveServices_WithoutAuth_ShouldReturn200() throws Exception {
+        // The active-services listing is public (landing page shows real prices)
+        when(serviceCatalogService.getActiveServices()).thenReturn(List.of(sampleService()));
+
         mockMvc.perform(get("/api/services"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()").value(1));
     }
 
     // ─── ADMIN ──────────────────────────────────────────────────────────

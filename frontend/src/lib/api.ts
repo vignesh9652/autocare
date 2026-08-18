@@ -5,14 +5,19 @@ import {
   AuthResponse,
   AdditionalServiceCreateRequest,
   AdditionalServiceResponse,
+  AdminWalletResponse,
   BookingRequest,
   BookingResponse,
   BookingStatus,
   CommissionConfigResponse,
   CreateOrderResponse,
+  CreateSparePartOrderResponse,
   DashboardResponse,
+  DiyGuide,
+  DiyStep,
   EarningsSummaryResponse,
   MechanicResponse,
+  MechanicWalletResponse,
   NotificationItem,
   PaymentMethod,
   PaymentResponse,
@@ -20,6 +25,8 @@ import {
   ReviewResponse,
   Role,
   ServiceResponse,
+  SparePartOrder,
+  SparePartOrderStatus,
   SparePartResponse,
   UserResponse,
   VehicleRequest,
@@ -27,6 +34,9 @@ import {
   VehicleType,
   VerifyPaymentRequest,
   VerifyPaymentResponse,
+  WalletTransactionResponse,
+  WithdrawalRequestResponse,
+  WithdrawalStatus,
 } from '@/types';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '';
@@ -105,6 +115,9 @@ export const mechanicApi = {
 // ─── Bookings ───────────────────────────────────────────────────────────────
 export const bookingApi = {
   create: (data: BookingRequest) => api.post<BookingResponse>('/api/bookings', data).then((r) => r.data),
+  /** Books a mechanic to install a spare part (SPARE_PART_INSTALLATION). */
+  createInstallation: (data: InstallationBookingRequest) =>
+    api.post<BookingResponse>('/api/bookings/installation', data).then((r) => r.data),
   getMine: () => api.get<BookingResponse[]>('/api/bookings').then((r) => r.data),
   getAll: () => api.get<BookingResponse[]>('/api/bookings/admin/all').then((r) => r.data),
   get: (id: number) => api.get<BookingResponse>(`/api/bookings/${id}`).then((r) => r.data),
@@ -112,6 +125,20 @@ export const bookingApi = {
   updateStatus: (id: number, status: BookingStatus) =>
     api.put<BookingResponse>(`/api/bookings/${id}/status`, { status }).then((r) => r.data),
 };
+
+export interface InstallationBookingRequest {
+  vehicleId: number;
+  sparePartId: number;
+  /** Optional — links this installation to a purchased spare-part order. */
+  sparePartOrderId?: number;
+  scheduledAt: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+  mechanicId?: number;
+  preferredSkill?: string;
+  serviceArea?: string;
+}
 
 // SSE live tracking — fetch-based so we can send the Authorization header
 export function subscribeToBookingStream(
@@ -186,6 +213,9 @@ export const paymentApi = {
   /** Creates a Razorpay order for a completed booking. Amount is resolved server-side. */
   createOrder: (bookingId: number) =>
     api.post<CreateOrderResponse>('/api/payments/create-order', { bookingId }).then((r) => r.data),
+  /** Creates a Razorpay order for a spare-part purchase. Amount is resolved server-side. */
+  createSparePartOrder: (orderId: number) =>
+    api.post<CreateSparePartOrderResponse>('/api/payments/create-spare-part-order', { orderId }).then((r) => r.data),
   /** Verifies the Razorpay signature on the backend and finalizes the payment. */
   verifyOrder: (data: VerifyPaymentRequest) =>
     api.post<VerifyPaymentResponse>('/api/payments/verify', data).then((r) => r.data),
@@ -220,11 +250,67 @@ export const serviceApi = {
   getCommissionConfig: () => api.get<CommissionConfigResponse>('/api/services/admin/config').then((r) => r.data),
   updateCommissionConfig: (platformCommissionPercentage: number) =>
     api.put<CommissionConfigResponse>('/api/services/admin/config', { platformCommissionPercentage }).then((r) => r.data),
+  /** Admin: spare-part installation fee. */
+  getInstallationFee: () => api.get<{ installationFee: number }>('/api/services/admin/installation-fee').then((r) => r.data),
+  updateInstallationFee: (installationFee: number) =>
+    api.put<{ installationFee: number }>('/api/services/admin/installation-fee', { installationFee }).then((r) => r.data),
+};
+
+// ─── DIY guides ─────────────────────────────────────────────────────────────
+export const diyApi = {
+  /** Published DIY guide for a spare part (404 when none is published). */
+  getForPart: (sparePartId: number) => api.get<DiyGuide>(`/api/parts/${sparePartId}/diy`).then((r) => r.data),
+  /** Published installation steps. */
+  stepsForPart: (sparePartId: number) => api.get<DiyStep[]>(`/api/parts/${sparePartId}/diy/steps`).then((r) => r.data),
+  /** Admin: full guide management. */
+  listAll: () => api.get<DiyGuide[]>('/api/admin/diy-guides').then((r) => r.data),
+  get: (id: number) => api.get<DiyGuide>(`/api/admin/diy-guides/${id}`).then((r) => r.data),
+  create: (data: Partial<DiyGuide> & { sparePartId: number; title: string }) =>
+    api.post<DiyGuide>('/api/admin/diy-guides', data).then((r) => r.data),
+  update: (id: number, data: Partial<DiyGuide>) =>
+    api.put<DiyGuide>(`/api/admin/diy-guides/${id}`, data).then((r) => r.data),
+  remove: (id: number) => api.delete(`/api/admin/diy-guides/${id}`),
+  publish: (id: number) => api.post<DiyGuide>(`/api/admin/diy-guides/${id}/publish`).then((r) => r.data),
+  unpublish: (id: number) => api.post<DiyGuide>(`/api/admin/diy-guides/${id}/unpublish`).then((r) => r.data),
+  addStep: (id: number, step: Omit<DiyStep, 'id' | 'diyGuideId'>) =>
+    api.post<DiyStep>(`/api/admin/diy-guides/${id}/steps`, step).then((r) => r.data),
+  updateStep: (id: number, stepId: number, step: Omit<DiyStep, 'id' | 'diyGuideId'>) =>
+    api.put<DiyStep>(`/api/admin/diy-guides/${id}/steps/${stepId}`, step).then((r) => r.data),
+  removeStep: (id: number, stepId: number) => api.delete(`/api/admin/diy-guides/${id}/steps/${stepId}`),
+  uploadStepImage: (id: number, stepId: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post<DiyStep>(`/api/admin/diy-guides/${id}/steps/${stepId}/image`, form).then((r) => r.data);
+  },
+};
+
+// ─── Spare part orders ─────────────────────────────────────────────────────
+export const ordersApi = {
+  create: (data: { items: { sparePartId: number; quantity: number }[]; address: string; discountAmount?: number }) =>
+    api.post<SparePartOrder>('/api/orders', data).then((r) => r.data),
+  getMine: () => api.get<SparePartOrder[]>('/api/orders').then((r) => r.data),
+  get: (id: number) => api.get<SparePartOrder>(`/api/orders/${id}`).then((r) => r.data),
+  /** Admin: advance the delivery status chain. */
+  updateStatus: (id: number, status: SparePartOrderStatus) =>
+    api.put<SparePartOrder>(`/api/orders/admin/${id}/status`, { status }).then((r) => r.data),
 };
 
 // ─── Mechanic earnings ──────────────────────────────────────────────────────
 export const earningsApi = {
   getMine: () => api.get<EarningsSummaryResponse>('/api/mechanics/earnings').then((r) => r.data),
+};
+
+// ─── Wallets / money distribution ──────────────────────────────────────────
+export const walletApi = {
+  /** The authenticated mechanic's own wallet. */
+  mechanic: () => api.get<MechanicWalletResponse>('/api/wallet/mechanic').then((r) => r.data),
+  /** The authenticated mechanic's ledger. */
+  transactions: () => api.get<WalletTransactionResponse[]>('/api/wallet/mechanic/transactions').then((r) => r.data),
+  /** Request a withdrawal from the available balance. */
+  requestWithdrawal: (amount: number) =>
+    api.post<WithdrawalRequestResponse>('/api/wallet/mechanic/withdrawals', { amount }).then((r) => r.data),
+  /** The authenticated mechanic's withdrawal requests. */
+  myWithdrawals: () => api.get<WithdrawalRequestResponse[]>('/api/wallet/mechanic/withdrawals').then((r) => r.data),
 };
 
 // ─── Reviews ────────────────────────────────────────────────────────────────
@@ -253,6 +339,15 @@ export const adminApi = {
   rejectMechanic: (id: number) => api.put(`/api/admin/mechanics/${id}/reject`).then((r) => r.data),
   allPayments: () => api.get('/api/admin/payments').then((r) => r.data as PaymentResponse[]),
   allUsers: () => api.get<UserResponse[]>('/api/users/admin/all').then((r) => r.data),
+  /** Platform wallet summary (balance / total commission / total withdrawn). */
+  wallet: () => api.get<AdminWalletResponse>('/api/admin/wallet').then((r) => r.data),
+  /** Platform wallet ledger. */
+  walletTransactions: () => api.get<WalletTransactionResponse[]>('/api/admin/wallet/transactions').then((r) => r.data),
+  /** Withdrawal requests, optionally filtered by status. */
+  walletWithdrawals: (status?: WithdrawalStatus) =>
+    api.get<WithdrawalRequestResponse[]>('/api/admin/wallet/withdrawals', { params: status ? { status } : {} }).then((r) => r.data),
+  approveWithdrawal: (id: number) => api.post(`/api/admin/wallet/withdrawals/${id}/approve`).then((r) => r.data),
+  rejectWithdrawal: (id: number) => api.post(`/api/admin/wallet/withdrawals/${id}/reject`).then((r) => r.data),
 };
 
 // Convenience invalidator

@@ -6,7 +6,7 @@ import { KpiCard } from '@/components/ui/KpiCard';
 import { CardSkeleton, ErrorState } from '@/components/ui/Feedback';
 import { titleCase } from '@/lib/utils';
 
-const PIE_COLORS = ['#f97316', '#10b981', '#8b5cf6', '#0ea5e9', '#ef4444', '#64748b'];
+const PIE_COLORS = ['#f59e0b', '#10b981', '#8b5cf6', '#0ea5e9', '#ef4444', '#64748b'];
 
 export function AdminOverview() {
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['admin-dashboard'], queryFn: adminApi.dashboard });
@@ -72,7 +72,7 @@ export function AdminOverview() {
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip cursor={{ fill: 'rgba(148,163,184,0.08)' }} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="#f97316" maxBarSize={48} />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="#f59e0b" maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -30,6 +30,9 @@ public class SparePartRequest {
 
     private String installationSteps;
 
+    /** Whether customers may book an AutoCare mechanic to install this part. */
+    private Boolean mechanicInstallationAvailable;
+
     public String getName() {
         return name;
     }
@@ -92,5 +95,13 @@ public class SparePartRequest {
 
     public void setInstallationSteps(String installationSteps) {
         this.installationSteps = installationSteps;
+    }
+
+    public Boolean getMechanicInstallationAvailable() {
+        return mechanicInstallationAvailable;
+    }
+
+    public void setMechanicInstallationAvailable(Boolean mechanicInstallationAvailable) {
+        this.mechanicInstallationAvailable = mechanicInstallationAvailable;
     }
 }

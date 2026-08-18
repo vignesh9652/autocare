@@ -70,6 +70,38 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(DiyGuideNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleDiyGuideNotFound(
+            DiyGuideNotFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DiyStepNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleDiyStepNotFound(
+            DiyStepNotFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleOrderNotFound(
+            OrderNotFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(OrderNotOwnedException.class)
+    public ResponseEntity<Map<String, String>> handleOrderNotOwned(
+            OrderNotOwnedException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<Map<String, String>> handleOptimisticLockingFailure(
             OptimisticLockingFailureException ex) {

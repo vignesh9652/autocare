@@ -39,12 +39,17 @@ public class SecurityConfig {
                 .requestMatchers("/api/bookings/**").authenticated()
                 // Admin-only: service price/commission management
                 .requestMatchers("/api/services/admin/**").hasRole("ADMIN")
+                // The active-services listing is public (used by the landing page)
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/services").permitAll()
                 .requestMatchers("/api/services/**").authenticated()
                 // Additional services: only mechanics raise requests; only
                 // admins list all; customers approve/reject via /api/additional-services/{id}/**
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/additional-services").hasRole("MECHANIC")
                 .requestMatchers("/api/additional-services/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/additional-services/**").authenticated()
+                // Wallets: admin wallet is ADMIN-only; each mechanic only sees their own
+                .requestMatchers("/api/wallet/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/wallet/mechanic/**").hasRole("MECHANIC")
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .anyRequest().authenticated()

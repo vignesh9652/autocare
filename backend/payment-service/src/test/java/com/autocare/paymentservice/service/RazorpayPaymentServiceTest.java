@@ -1,6 +1,7 @@
 package com.autocare.paymentservice.service;
 
 import com.autocare.paymentservice.client.BookingServiceClient;
+import com.autocare.paymentservice.client.SparePartsServiceClient;
 import com.autocare.paymentservice.config.RabbitMQConfig;
 import com.autocare.paymentservice.dto.CreateOrderResponse;
 import com.autocare.paymentservice.dto.VerifyPaymentRequest;
@@ -42,6 +43,9 @@ class RazorpayPaymentServiceTest {
     private BookingServiceClient bookingServiceClient;
 
     @Mock
+    private SparePartsServiceClient sparePartsServiceClient;
+
+    @Mock
     private RazorpayGatewayService gateway;
 
     @Mock
@@ -56,7 +60,7 @@ class RazorpayPaymentServiceTest {
     @BeforeEach
     void setUp() {
         paymentService = new RazorpayPaymentService(
-                transactionRepository, bookingServiceClient, gateway, rabbitTemplate);
+                transactionRepository, bookingServiceClient, sparePartsServiceClient, gateway, rabbitTemplate);
     }
 
     // ─── HELPERS ────────────────────────────────────────────────────────────

@@ -7,9 +7,11 @@ import com.autocare.adminservice.service.AdminDashboardService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -115,5 +117,64 @@ public class AdminController {
             throw new ServiceUnavailableException("vehicle-service is temporarily unavailable");
         }
         return ResponseEntity.ok(result.getData());
+    }
+
+    // ── Wallet (module lives in booking-service; proxied here) ────────────
+
+    /**
+     * The single platform wallet: balance, total commission, total withdrawn.
+     */
+    @GetMapping("/wallet")
+    public ResponseEntity<Map<String, Object>> wallet(
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.getAdminWallet(authHeader));
+    }
+
+    /**
+     * Full platform wallet ledger.
+     */
+    @GetMapping("/wallet/transactions")
+    public ResponseEntity<List<Map<String, Object>>> walletTransactions(
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.getAdminWalletTransactions(authHeader));
+    }
+
+    /**
+     * Mechanic withdrawal requests, optionally filtered by status
+     * (PENDING / APPROVED / REJECTED / PAID).
+     */
+    @GetMapping("/wallet/withdrawals")
+    public ResponseEntity<List<Map<String, Object>>> withdrawals(
+            @RequestParam(required = false) String status,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.getWithdrawals(authHeader, status));
+    }
+
+    /**
+     * Approves a PENDING withdrawal — debits the mechanic wallet and records
+     * the WITHDRAWAL ledger entry.
+     */
+    @PostMapping("/wallet/withdrawals/{id}/approve")
+    public ResponseEntity<Map<String, Object>> approveWithdrawal(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.approveWithdrawal(id, authHeader));
+    }
+
+    @PostMapping("/wallet/withdrawals/{id}/reject")
+    public ResponseEntity<Map<String, Object>> rejectWithdrawal(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.rejectWithdrawal(id, authHeader));
+    }
+
+    /**
+     * Reverses the wallet credits of a paid booking (idempotent).
+     */
+    @PostMapping("/wallet/bookings/{bookingId}/refund")
+    public ResponseEntity<Map<String, Object>> refundBooking(
+            @PathVariable Long bookingId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(adminDashboardService.refundBooking(bookingId, authHeader));
     }
 }
