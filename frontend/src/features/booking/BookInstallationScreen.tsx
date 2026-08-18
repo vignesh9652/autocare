@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -57,6 +57,7 @@ export function BookInstallationScreen() {
   const [scheduledAt, setScheduledAt] = useState<string>('');
   const [address, setAddress] = useState('');
   const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
+  const [userEditedAddress, setUserEditedAddress] = useState(false);
   const [locating, setLocating] = useState(false);
   const [location, setLocation] = useState<CustomerLocation | null>(null);
   const [radius, setRadius] = useState(25);
@@ -97,6 +98,13 @@ export function BookInstallationScreen() {
     if (step === 3) return mechanicId !== '';
     return false;
   }, [step, vehicleId, scheduledAt, address, pickedLocation, location, mechanicId]);
+
+  // Auto-fill address from map reverse geocode (only when user hasn't manually typed)
+  useEffect(() => {
+    if (pickedLocation?.area && !userEditedAddress) {
+      setAddress(pickedLocation.area);
+    }
+  }, [pickedLocation, userEditedAddress]);
 
   const captureLocation = async () => {
     if (!isGeolocationSupported()) {
@@ -285,7 +293,10 @@ export function BookInstallationScreen() {
                     label="Full address (house no, street, landmark, city)"
                     placeholder="e.g. 42 MG Road, Koramangala, Bangalore"
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      setUserEditedAddress(true);
+                    }}
                   />
                   <p className="flex items-start gap-1.5 text-[11px] font-medium text-ink-400">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />

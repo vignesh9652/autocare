@@ -28,8 +28,8 @@ const recommendation: Record<string, Variant> = { RECOMMENDED: 'info', APPROVED:
 const additional: Record<string, Variant> = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'error', CANCELLED: 'neutral' };
 const role: Record<string, Variant> = { ADMIN: 'purple', MECHANIC: 'info', CUSTOMER: 'default' };
 
-export function StatusBadge({ kind, status }: { kind: 'booking' | 'payment' | 'availability' | 'account' | 'recommendation' | 'additional' | 'role'; status: string }) {
+export function StatusBadge({ kind, status }: { kind: 'booking' | 'payment' | 'availability' | 'account' | 'recommendation' | 'additional' | 'role'; status: string | null | undefined }) {
   const map = { booking, payment, availability, account, recommendation, additional, role }[kind];
-  const variant = map[status] ?? 'default';
-  return <Badge variant={variant}>{status.replaceAll('_', ' ')}</Badge>;
+  const variant = status ? (map[status] ?? 'default') : 'neutral';
+  return <Badge variant={variant}>{(status ?? 'N/A').replaceAll('_', ' ')}</Badge>;
 }

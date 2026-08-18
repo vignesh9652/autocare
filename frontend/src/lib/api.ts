@@ -110,6 +110,8 @@ export const mechanicApi = {
     api.post<MechanicResponse>('/api/mechanics', data).then((r) => r.data),
   updateAvailability: (id: number, availabilityStatus: 'AVAILABLE' | 'BUSY' | 'OFFLINE') =>
     api.put<MechanicResponse>(`/api/mechanics/${id}/availability`, { availabilityStatus }).then((r) => r.data),
+  update: (id: number, data: { name?: string; phone?: string; skills?: string[]; serviceArea?: string; latitude?: number; longitude?: number }) =>
+    api.put<MechanicResponse>(`/api/mechanics/${id}`, data).then((r) => r.data),
 };
 
 // ─── Bookings ───────────────────────────────────────────────────────────────

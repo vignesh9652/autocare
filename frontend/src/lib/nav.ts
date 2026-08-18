@@ -19,7 +19,7 @@ export const customerNav: NavItem[] = [
   { label: 'My Installations', path: '/dashboard/installations', icon: WrenchIcon },
   { label: 'Payments', path: '/dashboard/payments', icon: CreditCard },
   { label: 'Reviews', path: '/dashboard/reviews', icon: Star },
-  { label: 'Marketplace', path: '/dashboard/marketplace', icon: ShoppingBag },
+  { label: 'Spare Parts', path: '/dashboard/marketplace', icon: ShoppingBag },
 ];
 
 export const mechanicNav: NavItem[] = [

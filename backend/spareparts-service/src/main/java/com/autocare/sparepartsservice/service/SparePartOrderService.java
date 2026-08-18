@@ -87,6 +87,7 @@ public class SparePartOrderService {
         order.setPaymentStatus("PENDING");
         order.setDeliveryFee(DELIVERY_FEE);
         order.setDiscountAmount(BigDecimal.ZERO);
+        order.setTotalAmount(BigDecimal.ZERO);
         order = orderRepository.save(order);
 
         BigDecimal subtotal = BigDecimal.ZERO;
@@ -210,8 +211,10 @@ public class SparePartOrderService {
         SparePartOrder order = findOrder(orderId);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", order.getId());
+        result.put("userId", order.getUserId());
         result.put("status", order.getStatus().name());
         result.put("paymentStatus", order.getPaymentStatus());
+        result.put("totalAmount", order.getTotalAmount());
         result.put("delivered", order.getStatus() == OrderStatus.DELIVERED);
         return result;
     }

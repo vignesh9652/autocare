@@ -71,7 +71,7 @@ export function PartDetailScreen() {
               disabled={part.stockQuantity === 0}
               onClick={() => {
                 addItem({ partId: part.id, name: part.name, price: part.price, category: part.category, imageUrl: partImageUrl(part.category, part.imageUrl), stock: part.stockQuantity });
-                toast('Added to cart', 'success');
+                toast(`${part.name} added to cart`, 'success');
               }}
             >
               <ShoppingCart className="h-5 w-5" /> Add to Cart
