@@ -6,6 +6,7 @@ export interface DetectedLocation {
   latitude: number;
   longitude: number;
   area: string;
+  pincode?: string;
   accuracy?: number;
 }
 
@@ -39,23 +40,43 @@ function coordsLabel(lat: number, lng: number): string {
   return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }
 
-/** Resolve a readable area name for coordinates (best-effort, never throws). */
-async function reverseGeocode(lat: number, lng: number): Promise<string> {
+/** Nominatim reverse-geocode result (subset we care about). */
+interface NominatimResult {
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    suburb?: string;
+    state?: string;
+    country?: string;
+    postcode?: string;
+  };
+}
+
+/**
+ * Resolve a readable area name + pincode for coordinates
+ * (best-effort, never throws).
+ */
+async function reverseGeocode(
+  lat: number,
+  lng: number,
+): Promise<{ area: string; pincode?: string }> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=13`,
-      { headers: { Accept: 'application/json' } }
+      { headers: { Accept: 'application/json' } },
     );
-    if (!res.ok) return coordsLabel(lat, lng);
-    const data = (await res.json()) as {
-      address?: { city?: string; town?: string; village?: string; suburb?: string; state?: string; country?: string };
-    };
+    if (!res.ok) return { area: coordsLabel(lat, lng) };
+    const data = (await res.json()) as NominatimResult;
     const a = data.address ?? {};
     const city = a.city ?? a.town ?? a.village ?? a.suburb;
     const parts = [city, a.state].filter(Boolean);
-    return parts.length > 0 ? parts.join(', ') : coordsLabel(lat, lng);
+    return {
+      area: parts.length > 0 ? parts.join(', ') : coordsLabel(lat, lng),
+      pincode: a.postcode,
+    };
   } catch {
-    return coordsLabel(lat, lng);
+    return { area: coordsLabel(lat, lng) };
   }
 }
 
@@ -73,8 +94,8 @@ export function detectLiveLocation(): Promise<DetectedLocation> {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude, accuracy } = position.coords;
-        const area = await reverseGeocode(latitude, longitude);
-        resolve({ latitude, longitude, area, accuracy });
+        const { area, pincode } = await reverseGeocode(latitude, longitude);
+        resolve({ latitude, longitude, area, pincode, accuracy });
       },
       (err) => {
         const message =

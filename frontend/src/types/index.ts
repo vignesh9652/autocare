@@ -1,7 +1,7 @@
 // ─── Enums ──────────────────────────────────────────────────────────────────
 export type Role = 'CUSTOMER' | 'MECHANIC' | 'ADMIN';
 export type AccountStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-export type VehicleType = 'CAR' | 'SEDAN' | 'SUV' | 'HATCHBACK' | 'TRUCK' | 'VAN' | 'BIKE' | 'MOTORCYCLE';
+export type VehicleType = 'CAR' | 'BIKE';
 export type AvailabilityStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
 export type BookingStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'PAYMENT_PENDING' | 'PAID' | 'REJECTED' | 'CANCELLED';
 export type AdditionalServiceStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
@@ -10,6 +10,13 @@ export type PaymentMethod = 'UPI' | 'CARD' | 'NETBANKING' | 'CASH';
 export type EarningStatus = 'PENDING' | 'PAID';
 export type ReferenceType = 'BOOKING' | 'SPARE_PART';
 export type RecommendationStatus = 'RECOMMENDED' | 'APPROVED' | 'REJECTED' | 'ORDERED';
+export type WalletTransactionType = 'CREDIT' | 'DEBIT' | 'WITHDRAWAL' | 'REFUND';
+export type WithdrawalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
+export type DifficultyLevel = 'EASY' | 'MEDIUM' | 'HARD';
+export type DiyGuideStatus = 'DRAFT' | 'PUBLISHED';
+export type SparePartOrderStatus = 'ORDERED' | 'PACKED' | 'SHIPPED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
+
+export const SPARE_PART_INSTALLATION = 'SPARE_PART_INSTALLATION';
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 export interface AuthResponse {
@@ -120,6 +127,10 @@ export interface BookingResponse {
   vehicleId: number;
   mechanicId: number | null;
   serviceType: string;
+  /** Spare part to install — set only for SPARE_PART_INSTALLATION bookings. */
+  sparePartId?: number | null;
+  /** Spare-part order the part was purchased in. */
+  sparePartOrderId?: number | null;
   status: BookingStatus;
   scheduledAt: string;
   address: string;
@@ -150,7 +161,59 @@ export interface SparePartResponse {
   imageUrl?: string | null;
   tutorialVideoUrl?: string;
   installationSteps?: string;
+  /** Whether AutoCare mechanics can be booked to install this part. */
+  mechanicInstallationAvailable?: boolean;
   createdAt: string;
+}
+
+// ─── DIY guides (spare-part installation tutorials) ───────────────────────
+export interface DiyStep {
+  id: number;
+  diyGuideId: number;
+  stepNumber: number;
+  title: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+}
+
+export interface DiyGuide {
+  id: number;
+  sparePartId: number;
+  title: string;
+  description?: string | null;
+  difficultyLevel: DifficultyLevel;
+  estimatedTimeMinutes: number;
+  requiredTools: string[];
+  safetyWarnings: string[];
+  videoUrl?: string | null;
+  status: DiyGuideStatus;
+  steps: DiyStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Spare part orders ─────────────────────────────────────────────────────
+export interface SparePartOrderItem {
+  id: number;
+  sparePartId: number;
+  partName: string;
+  unitPrice: number;
+  quantity: number;
+}
+
+export interface SparePartOrder {
+  id: number;
+  userId: number;
+  items: SparePartOrderItem[];
+  status: SparePartOrderStatus;
+  paymentStatus: 'PENDING' | 'PAID';
+  deliveryFee: number;
+  discountAmount: number;
+  totalAmount: number;
+  address: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RecommendationResponse {
@@ -214,6 +277,20 @@ export interface CreateOrderResponse {
   status: string;
 }
 
+/** Razorpay order payload returned by POST /api/payments/create-spare-part-order. */
+export interface CreateSparePartOrderResponse {
+  paymentId: number;
+  orderId: number;
+  /** Razorpay order id (order_…) used to open the Checkout SDK. */
+  razorpayOrderId: string;
+  /** Public Razorpay key id — safe to expose to the browser. */
+  razorpayKeyId: string;
+  /** Amount in paise (₹999.00 → 99900) as required by the Checkout SDK. */
+  amount: number;
+  currency: string;
+  status: string;
+}
+
 export interface VerifyPaymentRequest {
   razorpayPaymentId: string;
   razorpayOrderId: string;
@@ -253,6 +330,42 @@ export interface NotificationItem {
   message: string;
   read: boolean;
   createdAt: string;
+}
+
+// ─── Wallets / money distribution ──────────────────────────────────────────
+export interface AdminWalletResponse {
+  balance: number;
+  totalCommission: number;
+  totalWithdrawn: number;
+}
+
+export interface MechanicWalletResponse {
+  mechanicId: number;
+  balance: number;
+  totalEarnings: number;
+  totalWithdrawn: number;
+}
+
+export interface WalletTransactionResponse {
+  id: number;
+  walletType: 'ADMIN' | 'MECHANIC';
+  bookingId: number | null;
+  paymentId: number | null;
+  transactionType: WalletTransactionType;
+  amount: number;
+  balanceAfterTransaction: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface WithdrawalRequestResponse {
+  id: number;
+  mechanicId: number;
+  amount: number;
+  status: WithdrawalStatus;
+  requestedAt: string;
+  processedAt: string | null;
+  processedBy: number | null;
 }
 
 // ─── Admin ──────────────────────────────────────────────────────────────────

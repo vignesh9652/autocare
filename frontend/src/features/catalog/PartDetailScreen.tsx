@@ -1,7 +1,7 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, ArrowLeft, Truck, ShieldCheck } from 'lucide-react';
-import { partsApi } from '@/lib/api';
+import { ShoppingCart, ArrowLeft, Truck, ShieldCheck, BookOpen, Wrench, Zap } from 'lucide-react';
+import { diyApi, partsApi } from '@/lib/api';
 import { partImageUrl } from '@/lib/images';
 import { LoadingScreen, ErrorState } from '@/components/ui/Feedback';
 import { Badge } from '@/components/ui/Badge';
@@ -13,12 +13,25 @@ import { toast } from '@/stores/toast-store';
 export function PartDetailScreen() {
   const { id } = useParams<{ id: string }>();
   const addItem = useCartStore((s) => s.addItem);
+  const navigate = useNavigate();
 
   const { data: part, isLoading, isError, refetch } = useQuery({
     queryKey: ['part', id],
     queryFn: () => partsApi.get(Number(id)),
     enabled: !!id,
   });
+
+  // A DIY guide is available only when one is published for this part
+  // (the API returns 404 otherwise).
+  const { data: guide, isError: noDiyGuide } = useQuery({
+    queryKey: ['part-diy', id],
+    queryFn: () => diyApi.getForPart(Number(id)),
+    enabled: !!id,
+    retry: false,
+  });
+
+  const diyAvailable = !!guide && !noDiyGuide;
+  const mechanicAvailable = part?.mechanicInstallationAvailable !== false;
 
   if (isLoading) return <LoadingScreen label="Loading part…" />;
   if (isError || !part) return <ErrorState message="Couldn't load this part" onRetry={() => void refetch()} />;
@@ -63,10 +76,53 @@ export function PartDetailScreen() {
             >
               <ShoppingCart className="h-5 w-5" /> Add to Cart
             </Button>
-            <Link to="/cart">
-              <Button variant="secondary" size="lg">Go to Cart</Button>
-            </Link>
+            <Button
+              size="lg"
+              variant="secondary"
+              disabled={part.stockQuantity === 0}
+              onClick={() => {
+                addItem({ partId: part.id, name: part.name, price: part.price, category: part.category, imageUrl: partImageUrl(part.category, part.imageUrl), stock: part.stockQuantity });
+                navigate('/checkout');
+              }}
+            >
+              <Zap className="h-5 w-5" /> Buy Now
+            </Button>
           </div>
+
+          {/* Installation options — Buy → Learn → Install yourself OR book a mechanic */}
+          {(diyAvailable || mechanicAvailable) && (
+            <div className="mt-8 rounded-2xl border border-ink-100 p-5 dark:border-ink-800">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-ink-400">Installation options</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {diyAvailable && (
+                  <div className="flex flex-col justify-between rounded-xl bg-ink-50 p-4 dark:bg-ink-800/50">
+                    <div>
+                      <p className="flex items-center gap-2 text-sm font-bold text-ink-900 dark:text-ink-100">
+                        <BookOpen className="h-4 w-4 text-brand-500" /> DIY Installation
+                      </p>
+                      <p className="mt-1 text-xs text-ink-500">Learn how to install it yourself with a step-by-step guide.</p>
+                    </div>
+                    <Link to={`/parts/${part.id}/diy`} className="mt-3">
+                      <Button variant="outline" size="sm" className="w-full">View DIY Guide</Button>
+                    </Link>
+                  </div>
+                )}
+                {mechanicAvailable && (
+                  <div className="flex flex-col justify-between rounded-xl bg-ink-50 p-4 dark:bg-ink-800/50">
+                    <div>
+                      <p className="flex items-center gap-2 text-sm font-bold text-ink-900 dark:text-ink-100">
+                        <Wrench className="h-4 w-4 text-brand-500" /> Professional Installation
+                      </p>
+                      <p className="mt-1 text-xs text-ink-500">Let an AutoCare mechanic install it at your doorstep.</p>
+                    </div>
+                    <Link to={`/parts/${part.id}/install`} className="mt-3">
+                      <Button size="sm" className="w-full">Book a Mechanic</Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mt-8 grid grid-cols-2 gap-3">
             <div className="flex items-center gap-3 rounded-xl border border-ink-100 p-4 dark:border-ink-800">

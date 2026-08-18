@@ -16,6 +16,7 @@ public class SparePartResponse {
     private String imageUrl;
     private String tutorialVideoUrl;
     private String installationSteps;
+    private boolean mechanicInstallationAvailable;
     private LocalDateTime createdAt;
 
     public SparePartResponse() {}
@@ -34,6 +35,16 @@ public class SparePartResponse {
                              int stockQuantity, String category,
                              String imageUrl, String tutorialVideoUrl,
                              String installationSteps, LocalDateTime createdAt) {
+        this(id, name, description, compatibleVehicleModels, price, stockQuantity, category,
+                imageUrl, tutorialVideoUrl, installationSteps, true, createdAt);
+    }
+
+    public SparePartResponse(Long id, String name, String description,
+                             List<String> compatibleVehicleModels, BigDecimal price,
+                             int stockQuantity, String category,
+                             String imageUrl, String tutorialVideoUrl,
+                             String installationSteps, boolean mechanicInstallationAvailable,
+                             LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -44,6 +55,7 @@ public class SparePartResponse {
         this.imageUrl = imageUrl;
         this.tutorialVideoUrl = tutorialVideoUrl;
         this.installationSteps = installationSteps;
+        this.mechanicInstallationAvailable = mechanicInstallationAvailable;
         this.createdAt = createdAt;
     }
 
@@ -125,6 +137,14 @@ public class SparePartResponse {
 
     public void setInstallationSteps(String installationSteps) {
         this.installationSteps = installationSteps;
+    }
+
+    public boolean isMechanicInstallationAvailable() {
+        return mechanicInstallationAvailable;
+    }
+
+    public void setMechanicInstallationAvailable(boolean mechanicInstallationAvailable) {
+        this.mechanicInstallationAvailable = mechanicInstallationAvailable;
     }
 
     public LocalDateTime getCreatedAt() {

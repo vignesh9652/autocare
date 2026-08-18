@@ -5,32 +5,34 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Deep charcoal/navy base
+        // Cool gray → navy charcoal neutral scale.
+        // 50 = oklch(0.982 0.008 264) — near-white cool gray (page background)
+        // 900 = oklch(0.253 0.055 258) — dark navy charcoal (body text)
         ink: {
-          50: '#f6f8fb',
-          100: '#e9edf3',
-          200: '#d3dbe6',
-          300: '#aebbd0',
-          400: '#8396b5',
-          500: '#64799d',
-          600: '#4f6182',
-          700: '#414f6a',
-          800: '#383f54',
-          900: '#1f2437',
-          950: '#141725',
+          50: '#f6f9ff',
+          100: '#edf1f8',
+          200: '#d9e1ec',
+          300: '#b9c5d6',
+          400: '#8d9bb1',
+          500: '#62718a',
+          600: '#485770',
+          700: '#364258',
+          800: '#28324a',
+          900: '#11223c',
+          950: '#0a1428',
         },
-        // Confident amber/orange accent
+        // Warm amber/gold accent — premium highlights
         brand: {
-          50: '#fff8ed',
-          100: '#ffefd4',
-          200: '#fedbaa',
-          300: '#fdc074',
-          400: '#fb9c3c',
-          500: '#f97d16',
-          600: '#ea600c',
-          700: '#c2470c',
-          800: '#9a3912',
-          900: '#7c3012',
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
         },
       },
       fontFamily: {
@@ -38,9 +40,14 @@ export default {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        card: '0 1px 2px 0 rgb(16 24 40 / 0.05), 0 1px 3px 0 rgb(16 24 40 / 0.08)',
-        'card-lg': '0 10px 40px -12px rgb(16 24 40 / 0.18)',
-        glow: '0 0 0 1px rgb(249 125 22 / 0.15), 0 8px 30px -8px rgb(249 125 22 / 0.4)',
+        card: '0 1px 2px 0 rgb(10 20 40 / 0.06), 0 1px 3px 0 rgb(10 20 40 / 0.1)',
+        'card-lg': '0 10px 40px -12px rgb(10 20 40 / 0.25)',
+        glow: '0 0 0 1px rgb(245 158 11 / 0.2), 0 8px 30px -8px rgb(245 158 11 / 0.45)',
+        'navy-glow': '0 0 0 1px rgb(17 34 60 / 0.2), 0 8px 30px -8px rgb(17 34 60 / 0.4)',
+      },
+      backgroundImage: {
+        'brand-gradient': 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 45%, #d97706 100%)',
+        'ink-gradient': 'linear-gradient(160deg, #0a1428 0%, #11223c 55%, #0a1428 100%)',
       },
       borderRadius: {
         '4xl': '2rem',

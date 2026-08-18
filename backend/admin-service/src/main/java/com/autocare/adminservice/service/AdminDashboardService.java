@@ -7,6 +7,7 @@ import com.autocare.adminservice.client.ReviewServiceClient;
 import com.autocare.adminservice.client.SparePartsServiceClient;
 import com.autocare.adminservice.client.UserServiceClient;
 import com.autocare.adminservice.client.VehicleServiceClient;
+import com.autocare.adminservice.client.WalletServiceClient;
 import com.autocare.adminservice.dto.DashboardResponse;
 import com.autocare.adminservice.dto.ServiceResult;
 import com.autocare.adminservice.exception.ServiceUnavailableException;
@@ -44,6 +45,7 @@ public class AdminDashboardService {
     private final PaymentServiceClient paymentServiceClient;
     private final SparePartsServiceClient sparePartsServiceClient;
     private final ReviewServiceClient reviewServiceClient;
+    private final WalletServiceClient walletServiceClient;
 
     public AdminDashboardService(UserServiceClient userServiceClient,
                                  VehicleServiceClient vehicleServiceClient,
@@ -51,7 +53,8 @@ public class AdminDashboardService {
                                  BookingServiceClient bookingServiceClient,
                                  PaymentServiceClient paymentServiceClient,
                                  SparePartsServiceClient sparePartsServiceClient,
-                                 ReviewServiceClient reviewServiceClient) {
+                                 ReviewServiceClient reviewServiceClient,
+                                 WalletServiceClient walletServiceClient) {
         this.userServiceClient = userServiceClient;
         this.vehicleServiceClient = vehicleServiceClient;
         this.mechanicServiceClient = mechanicServiceClient;
@@ -59,6 +62,7 @@ public class AdminDashboardService {
         this.paymentServiceClient = paymentServiceClient;
         this.sparePartsServiceClient = sparePartsServiceClient;
         this.reviewServiceClient = reviewServiceClient;
+        this.walletServiceClient = walletServiceClient;
     }
 
     /**
@@ -227,6 +231,56 @@ public class AdminDashboardService {
 
     public ServiceResult<Map<String, Object>> getVehicle(Long vehicleId) {
         return vehicleServiceClient.getVehicleById(vehicleId);
+    }
+
+    // ── Wallet proxies (module lives in booking-service) ───────────────────
+
+    public Map<String, Object> getAdminWallet(String authHeader) {
+        ServiceResult<Map<String, Object>> result = walletServiceClient.getAdminWallet(authHeader);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("booking-service is temporarily unavailable");
+        }
+        return result.getData();
+    }
+
+    public List<Map<String, Object>> getAdminWalletTransactions(String authHeader) {
+        ServiceResult<List<Map<String, Object>>> result = walletServiceClient.getAdminTransactions(authHeader);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("booking-service is temporarily unavailable");
+        }
+        return result.getData();
+    }
+
+    public List<Map<String, Object>> getWithdrawals(String authHeader, String status) {
+        ServiceResult<List<Map<String, Object>>> result = walletServiceClient.getWithdrawals(authHeader, status);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("booking-service is temporarily unavailable");
+        }
+        return result.getData();
+    }
+
+    public Map<String, Object> approveWithdrawal(Long id, String authHeader) {
+        ServiceResult<Map<String, Object>> result = walletServiceClient.approveWithdrawal(id, authHeader);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("booking-service is temporarily unavailable");
+        }
+        return result.getData();
+    }
+
+    public Map<String, Object> rejectWithdrawal(Long id, String authHeader) {
+        ServiceResult<Map<String, Object>> result = walletServiceClient.rejectWithdrawal(id, authHeader);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("booking-service is temporarily unavailable");
+        }
+        return result.getData();
+    }
+
+    public Map<String, Object> refundBooking(Long bookingId, String authHeader) {
+        ServiceResult<Map<String, Object>> result = walletServiceClient.refundBooking(bookingId, authHeader);
+        if (!result.isAvailable()) {
+            throw new ServiceUnavailableException("booking-service is temporarily unavailable");
+        }
+        return result.getData();
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

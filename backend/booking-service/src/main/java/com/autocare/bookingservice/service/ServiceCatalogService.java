@@ -2,6 +2,8 @@ package com.autocare.bookingservice.service;
 
 import com.autocare.bookingservice.dto.CommissionConfigRequest;
 import com.autocare.bookingservice.dto.CommissionConfigResponse;
+import com.autocare.bookingservice.dto.InstallationFeeConfigRequest;
+import com.autocare.bookingservice.dto.InstallationFeeConfigResponse;
 import com.autocare.bookingservice.dto.ServiceRequest;
 import com.autocare.bookingservice.dto.ServiceResponse;
 import com.autocare.bookingservice.entity.PlatformConfig;
@@ -152,6 +154,44 @@ public class ServiceCatalogService {
                 .setScale(2, RoundingMode.HALF_UP).toPlainString());
         platformConfigRepository.save(config);
         return new CommissionConfigResponse(currentCommissionPercentage());
+    }
+
+    // ─── Installation fee configuration ────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public InstallationFeeConfigResponse getInstallationFeeConfig() {
+        return new InstallationFeeConfigResponse(currentInstallationFee());
+    }
+
+    @Transactional
+    public InstallationFeeConfigResponse updateInstallationFeeConfig(
+            InstallationFeeConfigRequest request) {
+        String key = PlatformConfig.KEY_INSTALLATION_FEE;
+        PlatformConfig config = platformConfigRepository.findByConfigKey(key)
+                .orElseGet(() -> new PlatformConfig(key, null));
+        config.setConfigValue(request.getInstallationFee()
+                .setScale(2, RoundingMode.HALF_UP).toPlainString());
+        platformConfigRepository.save(config);
+        return new InstallationFeeConfigResponse(currentInstallationFee());
+    }
+
+    /**
+     * Current spare-part installation fee (defaults to ₹300 when not
+     * configured). This is the authoritative price for SPARE_PART_INSTALLATION
+     * bookings — the client can never supply its own fee.
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal currentInstallationFee() {
+        return platformConfigRepository
+                .findByConfigKey(PlatformConfig.KEY_INSTALLATION_FEE)
+                .map(c -> {
+                    try {
+                        return new BigDecimal(c.getConfigValue());
+                    } catch (NumberFormatException e) {
+                        return new BigDecimal("300.00");
+                    }
+                })
+                .orElse(new BigDecimal("300.00"));
     }
 
     /**

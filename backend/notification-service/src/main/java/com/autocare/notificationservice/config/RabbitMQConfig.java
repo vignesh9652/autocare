@@ -26,6 +26,10 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY_ADDITIONAL_SERVICE_REQUESTED = "additional-service.requested";
     public static final String ROUTING_KEY_ADDITIONAL_SERVICE_APPROVED = "additional-service.approved";
     public static final String ROUTING_KEY_ADDITIONAL_SERVICE_REJECTED = "additional-service.rejected";
+    public static final String ROUTING_KEY_WALLET_MECHANIC_CREDITED = "wallet.mechanic-credited";
+    public static final String ROUTING_KEY_WITHDRAWAL_PROCESSED = "withdrawal.processed";
+    public static final String ROUTING_KEY_BOOKING_STATUS_CHANGED = "booking.status-changed";
+    public static final String ROUTING_KEY_ORDER_DELIVERED = "spare-part-order.delivered";
 
     /**
      * Declare the same topic exchange that booking-service and payment-service
@@ -113,6 +117,53 @@ public class RabbitMQConfig {
                 .bind(notificationQueue)
                 .to(exchange)
                 .with(ROUTING_KEY_ADDITIONAL_SERVICE_REJECTED);
+    }
+
+    /**
+     * Bind the queue to receive wallet-credit events so the mechanic can be
+     * told when their earning lands in their wallet.
+     */
+    @Bean
+    public Binding walletMechanicCreditedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_WALLET_MECHANIC_CREDITED);
+    }
+
+    /**
+     * Bind the queue to receive withdrawal decisions so the mechanic can be
+     * told when their request is approved or rejected.
+     */
+    @Bean
+    public Binding withdrawalProcessedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_WITHDRAWAL_PROCESSED);
+    }
+
+    /**
+     * Bind the queue to receive booking status transitions (accepted,
+     * rejected, started, cancelled).
+     */
+    @Bean
+    public Binding bookingStatusChangedBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_BOOKING_STATUS_CHANGED);
+    }
+
+    /**
+     * Bind the queue to receive spare-part delivery events.
+     */
+    @Bean
+    public Binding orderDeliveredBinding(Queue notificationQueue, TopicExchange exchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(exchange)
+                .with(ROUTING_KEY_ORDER_DELIVERED);
     }
 
     /**

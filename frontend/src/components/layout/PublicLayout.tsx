@@ -33,7 +33,7 @@ export function PublicLayout() {
         <div className="container-app flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold text-ink-900 dark:text-white">
             <Wrench className="h-6 w-6 text-brand-500" />
-            Auto<span className="text-brand-500">Care</span>
+            AutoCare
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
@@ -128,7 +128,7 @@ export function PublicLayout() {
           <div className="grid gap-8 sm:grid-cols-3">
             <div>
               <div className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink-900 dark:text-white">
-                <Wrench className="h-5 w-5 text-brand-500" /> Auto<span className="text-brand-500">Care</span>
+                <Wrench className="h-5 w-5 text-brand-500" /> AutoCare
               </div>
               <p className="text-sm text-ink-500 dark:text-ink-400">Doorstep vehicle repair & spare parts, done right.</p>
             </div>

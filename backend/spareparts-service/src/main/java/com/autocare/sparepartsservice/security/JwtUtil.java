@@ -39,4 +39,11 @@ public class JwtUtil {
     public Long getUserIdFromToken(String token) {
         return Long.parseLong(parseToken(token).getSubject());
     }
+
+    /**
+     * Returns the "role" claim (e.g. CUSTOMER, MECHANIC, ADMIN).
+     */
+    public String getRoleFromToken(String token) {
+        return parseToken(token).get("role", String.class);
+    }
 }

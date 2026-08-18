@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 @Table(name = "bookings")
 public class Booking {
 
+    /** Booking type for a spare-part installation job (Book a Mechanic). */
+    public static final String SERVICE_TYPE_SPARE_PART_INSTALLATION = "SPARE_PART_INSTALLATION";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,8 +24,30 @@ public class Booking {
     @Column(nullable = false)
     private Long mechanicId;
 
+    /**
+     * Mechanic's user account id (JWT subject) — resolved when the booking is
+     * created and used to notify the mechanic (e.g. wallet credits). Null for
+     * bookings created before this field existed or when the profile has no
+     * linked account.
+     */
+    @Column
+    private Long mechanicUserId;
+
     @Column(nullable = false)
     private String serviceType;
+
+    /**
+     * Spare part to install — set only for SPARE_PART_INSTALLATION bookings.
+     */
+    @Column
+    private Long sparePartId;
+
+    /**
+     * Spare-part order the part was purchased in. For SPARE_PART_INSTALLATION
+     * bookings the mechanic can only start once this order is DELIVERED.
+     */
+    @Column
+    private Long sparePartOrderId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -123,12 +148,36 @@ public class Booking {
         this.mechanicId = mechanicId;
     }
 
+    public Long getMechanicUserId() {
+        return mechanicUserId;
+    }
+
+    public void setMechanicUserId(Long mechanicUserId) {
+        this.mechanicUserId = mechanicUserId;
+    }
+
     public String getServiceType() {
         return serviceType;
     }
 
     public void setServiceType(String serviceType) {
         this.serviceType = serviceType;
+    }
+
+    public Long getSparePartId() {
+        return sparePartId;
+    }
+
+    public void setSparePartId(Long sparePartId) {
+        this.sparePartId = sparePartId;
+    }
+
+    public Long getSparePartOrderId() {
+        return sparePartOrderId;
+    }
+
+    public void setSparePartOrderId(Long sparePartOrderId) {
+        this.sparePartOrderId = sparePartOrderId;
     }
 
     public BookingStatus getStatus() {

@@ -1,16 +1,25 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { MapPin, Check, X, Play, CheckCircle2, Plus, Loader2, Wrench } from 'lucide-react';
+import { MapPin, Check, X, Play, CheckCircle2, Plus, Loader2, Wrench, Wrench as WrenchIcon } from 'lucide-react';
 import { additionalServiceApi, bookingApi, getErrorMessage, serviceApi } from '@/lib/api';
 import { toast } from '@/stores/toast-store';
-import { BookingStatus, ServiceResponse } from '@/types';
+import { BookingStatus, ServiceResponse, SPARE_PART_INSTALLATION } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/Badge';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/Feedback';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 
+const FILTERS = [
+  { key: 'all', label: 'All Jobs' },
+  { key: 'installations', label: 'Spare Part Installations' },
+] as const;
+
 export function AssignedJobs() {
+  const [params, setParams] = useSearchParams();
+  const filter = params.get('type') === 'installations' ? 'installations' : 'all';
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['assigned-jobs'],
     queryFn: bookingApi.getAssigned,
@@ -20,17 +29,46 @@ export function AssignedJobs() {
   if (isLoading) return <CardSkeleton count={3} />;
   if (isError) return <ErrorState message="Could not load jobs" onRetry={() => refetch()} />;
 
-  const jobs = data ?? [];
+  const jobs = (data ?? []).filter(
+    (j) => filter === 'all' || j.serviceType === SPARE_PART_INSTALLATION
+  );
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-ink-900 dark:text-ink-100">Assigned Jobs</h1>
+        <h1 className="text-2xl font-extrabold text-ink-900 dark:text-ink-100">
+          {filter === 'installations' ? 'Spare Part Installation Requests' : 'Assigned Jobs'}
+        </h1>
         <p className="mt-1 text-sm text-ink-500">Accept, reject, inspect, and update the jobs assigned to you.</p>
       </div>
 
+      <div className="mb-5 flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setParams(f.key === 'all' ? {} : { type: f.key })}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+              filter === f.key
+                ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+                : 'bg-ink-100 text-ink-600 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300'
+            }`}
+          >
+            {f.key === 'installations' && <WrenchIcon className="h-3.5 w-3.5" />}
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {jobs.length === 0 ? (
-        <EmptyState icon={<MapPin className="h-6 w-6" />} title="No assigned jobs" description="New bookings in your area will appear here automatically." />
+        <EmptyState
+          icon={<MapPin className="h-6 w-6" />}
+          title={filter === 'installations' ? 'No installation requests' : 'No assigned jobs'}
+          description={
+            filter === 'installations'
+              ? 'New spare-part installation bookings will appear here automatically.'
+              : 'New bookings in your area will appear here automatically.'
+          }
+        />
       ) : (
         <div className="space-y-4">
           {jobs.map((j) => (
@@ -71,8 +109,13 @@ function JobCard({ job: j }: { job: { id: number; serviceType: string; vehicleId
             <MapPin className="h-5 w-5" />
           </div>
           <div>
-            <p className="font-bold text-ink-900 dark:text-ink-100">{j.serviceType}</p>
-            <p className="text-xs text-ink-400">Booking #{j.id} · Vehicle #{j.vehicleId}</p>
+            <p className="font-bold text-ink-900 dark:text-ink-100">
+              {j.serviceType === SPARE_PART_INSTALLATION ? 'Spare Part Installation' : j.serviceType}
+            </p>
+            <p className="text-xs text-ink-400">
+              Booking #{j.id} · Vehicle #{j.vehicleId}
+              {'sparePartId' in j && j.sparePartId ? ` · Part #${j.sparePartId}` : ''}
+            </p>
             <p className="mt-1 text-xs text-ink-500">🕐 {formatDateTime(j.scheduledAt)}</p>
             <p className="mt-1 text-xs text-ink-500">📍 {j.address}</p>
           </div>

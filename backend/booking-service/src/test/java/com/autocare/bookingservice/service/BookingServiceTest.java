@@ -1,12 +1,15 @@
 package com.autocare.bookingservice.service;
 
 import com.autocare.bookingservice.client.MechanicServiceClient;
+import com.autocare.bookingservice.client.SparePartsServiceClient;
 import com.autocare.bookingservice.client.VehicleServiceClient;
 import com.autocare.bookingservice.config.RabbitMQConfig;
 import com.autocare.bookingservice.dto.BookingCreatedEvent;
 import com.autocare.bookingservice.dto.BookingPaidEvent;
 import com.autocare.bookingservice.dto.BookingRequest;
 import com.autocare.bookingservice.dto.BookingResponse;
+import com.autocare.bookingservice.dto.BookingStatusChangedEvent;
+import com.autocare.bookingservice.dto.InstallationBookingRequest;
 import com.autocare.bookingservice.entity.AdditionalServiceRequest;
 import com.autocare.bookingservice.entity.AdditionalServiceStatus;
 import com.autocare.bookingservice.entity.Booking;
@@ -52,7 +55,13 @@ class BookingServiceTest {
     private MechanicServiceClient mechanicServiceClient;
 
     @Mock
+    private SparePartsServiceClient sparePartsServiceClient;
+
+    @Mock
     private ServiceCatalogService serviceCatalogService;
+
+    @Mock
+    private WalletService walletService;
 
     @Mock
     private RabbitTemplate rabbitTemplate;
@@ -77,8 +86,8 @@ class BookingServiceTest {
     void setUp() {
         eventPublisher = new BookingEventPublisher();
         bookingService = new BookingService(bookingRepository, additionalServiceRequestRepository,
-                vehicleServiceClient, mechanicServiceClient, serviceCatalogService,
-                rabbitTemplate, eventPublisher);
+                vehicleServiceClient, mechanicServiceClient, sparePartsServiceClient,
+                serviceCatalogService, walletService, rabbitTemplate, eventPublisher);
 
         request = new BookingRequest();
         request.setVehicleId(vehicleId);
@@ -210,6 +219,12 @@ class BookingServiceTest {
         BookingCreatedEvent event = captor.getValue();
         assertEquals(99L, event.getMechanicId());
         assertEquals(mechanicUserId, event.getMechanicUserId());
+
+        // The mechanic's user account id is persisted so wallet credits and
+        // other notifications can target the right account later.
+        ArgumentCaptor<Booking> bookingCaptor = ArgumentCaptor.forClass(Booking.class);
+        verify(bookingRepository).save(bookingCaptor.capture());
+        assertEquals(mechanicUserId, bookingCaptor.getValue().getMechanicUserId());
     }
 
     @Test
@@ -682,6 +697,29 @@ class BookingServiceTest {
     }
 
     @Test
+    void markPaid_ShouldCreditWalletsWithThePaidBooking() {
+        booking.setStatus(BookingStatus.PAYMENT_PENDING);
+        booking.setEstimatedAmount(new BigDecimal("999.00"));
+        booking.setFinalAmount(new BigDecimal("999.00"));
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(serviceCatalogService.currentCommissionPercentage()).thenReturn(new BigDecimal("15.00"));
+        when(bookingRepository.save(any(Booking.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        doNothing().when(rabbitTemplate).convertAndSend(
+                anyString(), anyString(), any(Object.class));
+
+        bookingService.markPaid(bookingId, 777L, userId, new BigDecimal("999.00"));
+
+        // The wallet split (commission + mechanic earning) happens atomically
+        // with the PAID transition, inside the same transaction.
+        ArgumentCaptor<Booking> bookingCaptor = ArgumentCaptor.forClass(Booking.class);
+        verify(bookingRepository).save(bookingCaptor.capture());
+        verify(walletService).creditPaidBooking(bookingCaptor.getValue(), 777L);
+        assertEquals(0, new BigDecimal("149.85").compareTo(bookingCaptor.getValue().getPlatformCommission()));
+        assertEquals(0, new BigDecimal("849.15").compareTo(bookingCaptor.getValue().getMechanicEarning()));
+    }
+
+    @Test
     void markPaid_WhenAlreadyPaid_ShouldBeIdempotent() {
         booking.setStatus(BookingStatus.PAID);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
@@ -689,6 +727,7 @@ class BookingServiceTest {
         bookingService.markPaid(bookingId, 777L, userId, new BigDecimal("999.00"));
 
         verify(bookingRepository, never()).save(any());
+        verify(walletService, never()).creditPaidBooking(any(), any());
         verify(rabbitTemplate, never()).convertAndSend(
                 anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_PAID), any(Object.class));
     }
@@ -702,6 +741,7 @@ class BookingServiceTest {
 
         assertEquals(BookingStatus.PENDING, response.getStatus());
         verify(bookingRepository, never()).save(any());
+        verify(walletService, never()).creditPaidBooking(any(), any());
         verify(rabbitTemplate, never()).convertAndSend(
                 anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_PAID), any(Object.class));
     }
@@ -717,6 +757,7 @@ class BookingServiceTest {
 
         assertEquals(BookingStatus.PAYMENT_PENDING, response.getStatus());
         verify(bookingRepository, never()).save(any());
+        verify(walletService, never()).creditPaidBooking(any(), any());
         verify(rabbitTemplate, never()).convertAndSend(
                 anyString(), eq(RabbitMQConfig.ROUTING_KEY_BOOKING_PAID), any(Object.class));
     }
@@ -732,6 +773,7 @@ class BookingServiceTest {
 
         assertEquals(BookingStatus.PAYMENT_PENDING, response.getStatus());
         verify(bookingRepository, never()).save(any());
+        verify(walletService, never()).creditPaidBooking(any(), any());
     }
 
     @Test
@@ -759,5 +801,139 @@ class BookingServiceTest {
         assertThrows(BookingNotFoundException.class,
                 () -> bookingService.updateBookingStatus(
                         999L, BookingStatus.ACCEPTED, userId, "CUSTOMER"));
+    }
+
+    // ─── SPARE-PART INSTALLATION BOOKING ───────────────────────────────
+
+    @Test
+    void createInstallationBooking_ShouldLinkSparePartAndOrder() {
+        Long sparePartId = 500L;
+        Long sparePartOrderId = 600L;
+        doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
+        when(sparePartsServiceClient.getOrder(sparePartOrderId, "Bearer token"))
+                .thenReturn(Map.of("id", sparePartOrderId, "userId", userId, "paymentStatus", "PAID"));
+        when(mechanicServiceClient.getMechanicById(mechanicId))
+                .thenReturn(Map.of("id", mechanicId, "availabilityStatus", "AVAILABLE", "userId", mechanicUserId));
+        when(serviceCatalogService.currentInstallationFee()).thenReturn(new BigDecimal("300.00"));
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doNothing().when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));
+
+        InstallationBookingRequest request = new InstallationBookingRequest();
+        request.setVehicleId(vehicleId);
+        request.setSparePartId(sparePartId);
+        request.setSparePartOrderId(sparePartOrderId);
+        request.setMechanicId(mechanicId);
+        request.setScheduledAt(LocalDateTime.of(2026, 8, 5, 11, 0));
+        request.setAddress("456 Oak Ave");
+
+        BookingResponse response = bookingService.createInstallationBooking(
+                userId, request, "Bearer token");
+
+        assertEquals(Booking.SERVICE_TYPE_SPARE_PART_INSTALLATION, response.getServiceType());
+        assertEquals(sparePartId, response.getSparePartId());
+        assertEquals(sparePartOrderId, response.getSparePartOrderId());
+        assertEquals(0, new BigDecimal("300.00").compareTo(response.getEstimatedAmount()));
+
+        ArgumentCaptor<Booking> captor = ArgumentCaptor.forClass(Booking.class);
+        verify(bookingRepository).save(captor.capture());
+        assertEquals(sparePartId, captor.getValue().getSparePartId());
+        assertEquals(sparePartOrderId, captor.getValue().getSparePartOrderId());
+        assertEquals(mechanicUserId, captor.getValue().getMechanicUserId());
+    }
+
+    @Test
+    void createInstallationBooking_WithUnpaidOrder_ShouldReject() {
+        Long sparePartId = 500L;
+        Long sparePartOrderId = 600L;
+        doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
+        when(sparePartsServiceClient.getOrder(sparePartOrderId, "Bearer token"))
+                .thenReturn(Map.of("id", sparePartOrderId, "userId", userId, "paymentStatus", "PENDING"));
+
+        InstallationBookingRequest request = new InstallationBookingRequest();
+        request.setVehicleId(vehicleId);
+        request.setSparePartId(sparePartId);
+        request.setSparePartOrderId(sparePartOrderId);
+        request.setScheduledAt(LocalDateTime.of(2026, 8, 5, 11, 0));
+        request.setAddress("456 Oak Ave");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createInstallationBooking(userId, request, "Bearer token"));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void createInstallationBooking_WithForeignOrder_ShouldReject() {
+        Long sparePartId = 500L;
+        Long sparePartOrderId = 600L;
+        doNothing().when(vehicleServiceClient).validateVehicleOwnership(vehicleId, userId);
+        when(sparePartsServiceClient.getOrder(sparePartOrderId, "Bearer token"))
+                .thenReturn(null); // 404/403 → not owned
+
+        InstallationBookingRequest request = new InstallationBookingRequest();
+        request.setVehicleId(vehicleId);
+        request.setSparePartId(sparePartId);
+        request.setSparePartOrderId(sparePartOrderId);
+        request.setScheduledAt(LocalDateTime.of(2026, 8, 5, 11, 0));
+        request.setAddress("456 Oak Ave");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createInstallationBooking(userId, request, "Bearer token"));
+    }
+
+    @Test
+    void installationBooking_MechanicCannotStartBeforePartDelivered() {
+        booking.setServiceType(Booking.SERVICE_TYPE_SPARE_PART_INSTALLATION);
+        booking.setSparePartId(500L);
+        booking.setSparePartOrderId(600L);
+        booking.setStatus(BookingStatus.ACCEPTED);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId))
+                .thenReturn(mechanicId);
+        when(sparePartsServiceClient.isOrderDelivered(600L)).thenReturn(false);
+
+        assertThrows(InvalidStatusTransitionException.class,
+                () -> bookingService.updateBookingStatus(
+                        bookingId, BookingStatus.IN_PROGRESS, mechanicUserId, "MECHANIC"));
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void installationBooking_MechanicCanStartAfterPartDelivered() {
+        booking.setServiceType(Booking.SERVICE_TYPE_SPARE_PART_INSTALLATION);
+        booking.setSparePartId(500L);
+        booking.setSparePartOrderId(600L);
+        booking.setStatus(BookingStatus.ACCEPTED);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId))
+                .thenReturn(mechanicId);
+        when(sparePartsServiceClient.isOrderDelivered(600L)).thenReturn(true);
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doNothing().when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));
+
+        BookingResponse response = bookingService.updateBookingStatus(
+                bookingId, BookingStatus.IN_PROGRESS, mechanicUserId, "MECHANIC");
+
+        assertEquals(BookingStatus.IN_PROGRESS, response.getStatus());
+        verify(bookingRepository).save(any(Booking.class));
+    }
+
+    @Test
+    void mechanicAccept_ShouldPublishStatusChangedEvent() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(mechanicServiceClient.getMechanicIdByUserId(mechanicUserId))
+                .thenReturn(mechanicId);
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doNothing().when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));
+
+        bookingService.updateBookingStatus(bookingId, BookingStatus.ACCEPTED, mechanicUserId, "MECHANIC");
+
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(rabbitTemplate).convertAndSend(
+                eq(RabbitMQConfig.TOPIC_EXCHANGE_NAME),
+                eq(RabbitMQConfig.ROUTING_KEY_BOOKING_STATUS_CHANGED),
+                eventCaptor.capture());
+        assertTrue(eventCaptor.getValue() instanceof BookingStatusChangedEvent);
+        assertEquals(BookingStatus.ACCEPTED,
+                ((BookingStatusChangedEvent) eventCaptor.getValue()).getNewStatus());
     }
 }

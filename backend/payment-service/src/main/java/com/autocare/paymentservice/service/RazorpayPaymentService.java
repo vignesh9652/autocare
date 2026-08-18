@@ -1,6 +1,7 @@
 package com.autocare.paymentservice.service;
 
 import com.autocare.paymentservice.client.BookingServiceClient;
+import com.autocare.paymentservice.client.SparePartsServiceClient;
 import com.autocare.paymentservice.config.RabbitMQConfig;
 import com.autocare.paymentservice.dto.*;
 import com.autocare.paymentservice.entity.PaymentStatus;
@@ -54,15 +55,18 @@ public class RazorpayPaymentService {
 
     private final TransactionRepository transactionRepository;
     private final BookingServiceClient bookingServiceClient;
+    private final SparePartsServiceClient sparePartsServiceClient;
     private final RazorpayGatewayService gateway;
     private final RabbitTemplate rabbitTemplate;
 
     public RazorpayPaymentService(TransactionRepository transactionRepository,
                                   BookingServiceClient bookingServiceClient,
+                                  SparePartsServiceClient sparePartsServiceClient,
                                   RazorpayGatewayService gateway,
                                   RabbitTemplate rabbitTemplate) {
         this.transactionRepository = transactionRepository;
         this.bookingServiceClient = bookingServiceClient;
+        this.sparePartsServiceClient = sparePartsServiceClient;
         this.gateway = gateway;
         this.rabbitTemplate = rabbitTemplate;
     }
@@ -333,6 +337,75 @@ public class RazorpayPaymentService {
         transactionRepository.save(transaction);
         publishFailed(transaction);
         return Map.of("status", "processed", "transactionStatus", "FAILED");
+    }
+
+    // ─── Spare-part order Razorpay flow ───────────────────────────────────
+
+    /**
+     * Creates a Razorpay order for a spare-part purchase. The amount is resolved
+     * server-side from the order's totalAmount — the client only sends the order
+     * id and its JWT.
+     */
+    @Transactional
+    public CreateSparePartOrderResponse createSparePartOrder(Long userId, Long orderId, String authHeader) {
+        // 1. Fetch + validate the order via spareparts-service
+        Map<String, Object> order = sparePartsServiceClient.getOrderStatus(orderId, authHeader);
+
+        // Ownership check
+        Number owner = (Number) order.get("userId");
+        if (owner != null && owner.longValue() != userId.longValue()) {
+            throw new TransactionNotOwnedException("This order does not belong to you");
+        }
+
+        String paymentStatus = stringOf(order.get("paymentStatus"));
+        if ("PAID".equalsIgnoreCase(paymentStatus)) {
+            throw new PaymentAlreadyProcessedException(
+                    "Order #" + orderId + " is already paid — cannot pay twice.");
+        }
+
+        // 2. The amount is authoritative from the order — never the client
+        BigDecimal totalAmount = decimalOf(order.get("totalAmount"));
+        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BookingNotEligibleException(
+                    "Order #" + orderId + " has no payable amount.");
+        }
+
+        // 3. Duplicate payment prevention — one active/successful payment per order
+        if (transactionRepository.existsByReferenceTypeAndReferenceIdAndStatusIn(
+                ReferenceType.SPARE_PART, orderId, ACTIVE_OR_DONE)) {
+            throw new PaymentAlreadyProcessedException(
+                    "Payment already completed or in progress for order #" + orderId
+                            + " — cannot pay twice.");
+        }
+
+        // 4. Persist the INITIATED transaction, then create the Razorpay order
+        Transaction transaction = new Transaction(
+                userId, ReferenceType.SPARE_PART, orderId, totalAmount, "RAZORPAY");
+        transaction = transactionRepository.save(transaction);
+
+        try {
+            GatewayResult result = gateway.createOrder(
+                    totalAmount, "INR", "AC-SP-" + orderId + "-" + transaction.getId());
+            transaction.setGatewayTransactionId(result.gatewayTransactionId());
+            transaction = transactionRepository.save(transaction);
+        } catch (PaymentGatewayException e) {
+            transaction.setStatus(PaymentStatus.FAILED);
+            transactionRepository.save(transaction);
+            throw e;
+        }
+
+        log.info("💳 Razorpay order {} created for spare-part order #{} (txn #{}, {} {})",
+                transaction.getGatewayTransactionId(), orderId, transaction.getId(),
+                totalAmount, "INR");
+
+        return new CreateSparePartOrderResponse(
+                transaction.getId(),
+                orderId,
+                transaction.getGatewayTransactionId(),
+                gateway.getKeyId(),
+                totalAmount.multiply(BigDecimal.valueOf(100)).longValue(),
+                "INR",
+                transaction.getStatus().name());
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────
