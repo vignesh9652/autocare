@@ -13,6 +13,8 @@ public class SparePartResponse {
     private BigDecimal price;
     private int stockQuantity;
     private String category;
+    private String brand;
+    private BigDecimal deliveryFee;
     private String imageUrl;
     private String tutorialVideoUrl;
     private String installationSteps;
@@ -45,6 +47,18 @@ public class SparePartResponse {
                              String imageUrl, String tutorialVideoUrl,
                              String installationSteps, boolean mechanicInstallationAvailable,
                              LocalDateTime createdAt) {
+        this(id, name, description, compatibleVehicleModels, price, stockQuantity, category,
+                null, null, imageUrl, tutorialVideoUrl, installationSteps,
+                mechanicInstallationAvailable, createdAt);
+    }
+
+    public SparePartResponse(Long id, String name, String description,
+                             List<String> compatibleVehicleModels, BigDecimal price,
+                             int stockQuantity, String category,
+                             String brand, BigDecimal deliveryFee,
+                             String imageUrl, String tutorialVideoUrl,
+                             String installationSteps, boolean mechanicInstallationAvailable,
+                             LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -52,6 +66,8 @@ public class SparePartResponse {
         this.price = price;
         this.stockQuantity = stockQuantity;
         this.category = category;
+        this.brand = brand;
+        this.deliveryFee = deliveryFee;
         this.imageUrl = imageUrl;
         this.tutorialVideoUrl = tutorialVideoUrl;
         this.installationSteps = installationSteps;
@@ -153,5 +169,21 @@ public class SparePartResponse {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    public BigDecimal getDeliveryFee() {
+        return deliveryFee;
+    }
+
+    public void setDeliveryFee(BigDecimal deliveryFee) {
+        this.deliveryFee = deliveryFee;
     }
 }

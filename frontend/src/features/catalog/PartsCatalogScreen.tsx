@@ -116,7 +116,7 @@ export function PartsCatalogScreen() {
                       <button
                         onClick={() => {
                           addItem({ partId: part.id, name: part.name, price: part.price, category: part.category, imageUrl: partImageUrl(part.category, part.imageUrl), stock: part.stockQuantity });
-                          toast('Added to cart', 'success');
+                          toast(`${part.name} added to cart`, 'success');
                         }}
                         className="rounded-xl bg-brand-500 p-2 text-white transition hover:bg-brand-600 active:scale-95"
                         aria-label={`Add ${part.name} to cart`}

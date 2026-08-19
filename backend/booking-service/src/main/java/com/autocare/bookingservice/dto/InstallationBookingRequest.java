@@ -49,6 +49,14 @@ public class InstallationBookingRequest {
 
     private String serviceArea;
 
+    /**
+     * When true, the installation booking is part of a combined Buy+Install
+     * purchase. The payment check (order must be PAID) is skipped because the
+     * customer pays for both the part and the installation in a single
+     * Razorpay transaction.
+     */
+    private Boolean combinedPurchase;
+
     /** Ignored by the backend — the fee always comes from platform config. */
     private BigDecimal installationFee;
 
@@ -138,5 +146,13 @@ public class InstallationBookingRequest {
 
     public void setInstallationFee(BigDecimal installationFee) {
         this.installationFee = installationFee;
+    }
+
+    public Boolean getCombinedPurchase() {
+        return combinedPurchase;
+    }
+
+    public void setCombinedPurchase(Boolean combinedPurchase) {
+        this.combinedPurchase = combinedPurchase;
     }
 }

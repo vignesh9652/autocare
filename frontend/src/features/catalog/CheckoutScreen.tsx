@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CreditCard, ShieldCheck, CheckCircle2, XCircle, Printer } from 'lucide-react';
 import { useCartStore } from '@/stores/cart-store';
@@ -7,12 +7,21 @@ import { useAuthStore } from '@/stores/auth-store';
 import { toast } from '@/stores/toast-store';
 import { formatCurrency } from '@/lib/utils';
 import { CreateSparePartOrderResponse } from '@/types';
+import { LocationPicker, PickedLocation } from '@/components/ui/LocationPicker';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/Feedback';
 
 /** Flat doorstep delivery fee charged by the platform (₹) — matches the backend. */
 const DELIVERY_FEE = 80;
+
+/** Predefined discount coupons. */
+const COUPONS: Record<string, { discount: number; type: 'fixed' | 'percent'; description: string }> = {
+  'WELCOME10': { discount: 10, type: 'percent', description: '10% off on your first order' },
+  'SAVE50': { discount: 50, type: 'fixed', description: 'Flat ₹50 off' },
+  'SPARE100': { discount: 100, type: 'fixed', description: 'Flat ₹100 off on spare parts' },
+  'FESTIVE20': { discount: 20, type: 'percent', description: '20% off festive discount' },
+};
 
 // ── Razorpay Checkout SDK ────────────────────────────────────────────────────
 
@@ -79,8 +88,20 @@ export function CheckoutScreen() {
   const { items, subtotal, clear } = useCartStore();
   const user = useAuthStore((s) => s.user);
   const [address, setAddress] = useState('');
+  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
+  const [userEditedAddress, setUserEditedAddress] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; type: 'fixed' | 'percent'; description: string } | null>(null);
+  const [couponError, setCouponError] = useState('');
   const [payState, setPayState] = useState<PayState>({ phase: 'idle' });
   const paymentSubmittedRef = useRef(false);
+
+  // Auto-fill address from map reverse geocode
+  useEffect(() => {
+    if (pickedLocation?.area && !userEditedAddress) {
+      setAddress(pickedLocation.area);
+    }
+  }, [pickedLocation, userEditedAddress]);
 
   if (items.length === 0) {
     return (
@@ -90,7 +111,12 @@ export function CheckoutScreen() {
     );
   }
 
-  const total = subtotal() + DELIVERY_FEE;
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.type === 'percent'
+      ? Math.round(subtotal() * appliedCoupon.discount / 100)
+      : appliedCoupon.discount
+    : 0;
+  const total = Math.max(0, subtotal() + DELIVERY_FEE - discountAmount);
 
   const handlePay = async () => {
     if (address.trim().length < 8) {
@@ -108,6 +134,7 @@ export function CheckoutScreen() {
       const order = await ordersApi.create({
         items: items.map((item) => ({ sparePartId: item.partId, quantity: item.quantity })),
         address: address.trim(),
+        discountAmount: discountAmount > 0 ? discountAmount : undefined,
       });
 
       // 2. Create the Razorpay order on the backend — amount resolved server-side
@@ -267,9 +294,77 @@ export function CheckoutScreen() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
+          <div>
+            <h2 className="mb-3 text-base font-bold text-ink-900 dark:text-ink-100">Delivery Location</h2>
+            <LocationPicker value={pickedLocation} onChange={setPickedLocation} height="300px" />
+          </div>
           <div className="card p-5">
             <h2 className="mb-3 text-base font-bold text-ink-900 dark:text-ink-100">Delivery Address</h2>
-            <Input label="Full address" id="address" placeholder="House no, street, city, PIN" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <p className="mb-3 text-xs text-ink-500">Click the map or use GPS to set your location, then enter the full delivery address below.</p>
+            <Textarea
+              id="address"
+              label="Full address (house no, street, landmark, city, PIN)"
+              placeholder="e.g. 42 MG Road, Koramangala, Bangalore"
+              value={address}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                setUserEditedAddress(true);
+              }}
+            />
+          </div>
+          <div className="card p-5">
+            <h2 className="mb-3 text-base font-bold text-ink-900 dark:text-ink-100">Discount Coupon</h2>
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-500/25 dark:bg-emerald-500/10">
+                <div>
+                  <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{appliedCoupon.code} — {appliedCoupon.description}</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500">You save {formatCurrency(discountAmount)}</p>
+                </div>
+                <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-xs font-medium text-emerald-700 underline dark:text-emerald-400">Remove</button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <input
+                    className="input flex-1"
+                    value={couponCode}
+                    onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
+                    placeholder="Enter coupon code"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const coupon = COUPONS[couponCode.trim().toUpperCase()];
+                        if (coupon) {
+                          setAppliedCoupon({ code: couponCode.trim().toUpperCase(), ...coupon });
+                          setCouponError('');
+                          toast(`Coupon applied! ${coupon.description}`, 'success');
+                        } else {
+                          setCouponError('Invalid coupon code');
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      const coupon = COUPONS[couponCode.trim().toUpperCase()];
+                      if (coupon) {
+                        setAppliedCoupon({ code: couponCode.trim().toUpperCase(), ...coupon });
+                        setCouponError('');
+                        toast(`Coupon applied! ${coupon.description}`, 'success');
+                      } else {
+                        setCouponError('Invalid coupon code');
+                      }
+                    }}
+                    disabled={!couponCode.trim()}
+                  >
+                    Apply
+                  </Button>
+                </div>
+                {couponError && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{couponError}</p>}
+                <p className="mt-2 text-[11px] text-ink-400">Try: WELCOME10, SAVE50, SPARE100, FESTIVE20</p>
+              </>
+            )}
           </div>
 
           <div className="card p-5">
@@ -314,6 +409,12 @@ export function CheckoutScreen() {
               <span>Delivery fee</span>
               <span className="font-medium">{formatCurrency(DELIVERY_FEE)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
+                <span>Discount ({appliedCoupon?.code})</span>
+                <span className="font-medium">-{formatCurrency(discountAmount)}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t border-ink-100 pt-3 font-bold text-ink-900 dark:border-ink-800 dark:text-ink-100">
               <span>Total</span>
               <span>{formatCurrency(total)}</span>

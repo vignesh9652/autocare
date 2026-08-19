@@ -36,6 +36,12 @@ public class SparePart {
     @Column(nullable = false)
     private String category;
 
+    private String brand;
+
+    /** Flat doorstep delivery fee charged per order (₹). */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal deliveryFee = new java.math.BigDecimal("80.00");
+
     /** URL of the uploaded product image (if any). */
     private String imageUrl;
 
@@ -72,6 +78,22 @@ public class SparePart {
         this.price = price;
         this.stockQuantity = stockQuantity;
         this.category = category;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    public BigDecimal getDeliveryFee() {
+        return deliveryFee;
+    }
+
+    public void setDeliveryFee(BigDecimal deliveryFee) {
+        this.deliveryFee = deliveryFee;
     }
 
     public Long getId() {

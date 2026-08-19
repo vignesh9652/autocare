@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 /**
@@ -61,6 +62,33 @@ public class BookingServiceClient {
             log.warn("⚠️ booking-service call failed for booking #{}: {}", bookingId, String.valueOf(e));
             throw new PaymentGatewayException(
                     "Could not reach booking-service to validate booking #" + bookingId, e);
+        }
+    }
+
+    /**
+     * Fetches the platform-configured installation fee from booking-service.
+     * Used by the Buy+Install combined payment flow to add the installation
+     * fee to the Razorpay order amount.
+     */
+    public BigDecimal currentInstallationFee() {
+        try {
+            Map<String, Object> result = webClientBuilder.build()
+                    .get()
+                    .uri("lb://BOOKING-SERVICE/api/services/admin/installation-fee")
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {
+                    })
+                    .block();
+            if (result != null && result.get("installationFee") != null) {
+                Object fee = result.get("installationFee");
+                if (fee instanceof Number n) return new BigDecimal(n.toString());
+                if (fee instanceof String s) return new BigDecimal(s);
+            }
+            return new BigDecimal("300.00");
+        } catch (Exception e) {
+            log.warn("⚠️ Could not fetch installation fee from booking-service, using default ₹300: {}",
+                    e.getMessage());
+            return new BigDecimal("300.00");
         }
     }
 }

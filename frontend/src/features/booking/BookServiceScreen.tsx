@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';import { ArrowLeft,
   ArrowRight,
@@ -81,6 +81,7 @@ export function BookServiceScreen() {
   const [scheduledAt, setScheduledAt] = useState<string>('');
   const [address, setAddress] = useState('');
   const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
+  const [userEditedAddress, setUserEditedAddress] = useState(false);
   const [preferredSkill, setPreferredSkill] = useState('');
   const [locating, setLocating] = useState(false);
   const [location, setLocation] = useState<CustomerLocation | null>(null);
@@ -141,6 +142,13 @@ export function BookServiceScreen() {
     if (step === 4) return mechanicId !== '';
     return false;
   }, [step, vehicleId, selectedServices, scheduledAt, address, pickedLocation, location, mechanicId]);
+
+  // Auto-fill address from map reverse geocode (only when user hasn't manually typed)
+  useEffect(() => {
+    if (pickedLocation?.area && !userEditedAddress) {
+      setAddress(pickedLocation.area);
+    }
+  }, [pickedLocation, userEditedAddress]);
 
   const toggleService = (name: string) => {
     setSelectedServices((prev) =>
@@ -501,7 +509,10 @@ export function BookServiceScreen() {
                     label="Full address (house no, street, landmark, city)"
                     placeholder="e.g. 42 MG Road, Koramangala, Bangalore"
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      setUserEditedAddress(true);
+                    }}
                   />
                   <Input
                     id="skill"

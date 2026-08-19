@@ -26,6 +26,11 @@ public class SparePartRequest {
     @NotBlank(message = "Category is required")
     private String category;
 
+    private String brand;
+
+    /** Flat doorstep delivery fee (₹). Defaults to 80 when omitted. */
+    private BigDecimal deliveryFee;
+
     private String tutorialVideoUrl;
 
     private String installationSteps;
@@ -79,6 +84,22 @@ public class SparePartRequest {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    public BigDecimal getDeliveryFee() {
+        return deliveryFee;
+    }
+
+    public void setDeliveryFee(BigDecimal deliveryFee) {
+        this.deliveryFee = deliveryFee;
     }
 
     public String getTutorialVideoUrl() {

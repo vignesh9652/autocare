@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -21,7 +21,7 @@ import {
   X,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { bookingApi, getErrorMessage, mechanicApi, partsApi, serviceApi, vehicleApi } from '@/lib/api';
+import { bookingApi, getErrorMessage, mechanicApi, ordersApi, partsApi, paymentApi, serviceApi, vehicleApi } from '@/lib/api';
 import { assetUrl, partImageUrl } from '@/lib/images';
 import { isGeolocationSupported, detectLiveLocation, haversineKm, formatDistanceKm } from '@/lib/geolocation';
 import { LocationPicker, PickedLocation } from '@/components/ui/LocationPicker';
@@ -47,8 +47,30 @@ interface MechanicWithDistance extends MechanicResponse {
   distanceKm?: number;
 }
 
+function loadRazorpayScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (window.Razorpay) return resolve();
+    const src = 'https://checkout.razorpay.com/v1/checkout.js';
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', () => reject(new Error('Could not load Razorpay checkout')));
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Could not load Razorpay checkout'));
+    document.body.appendChild(script);
+  });
+}
+
+// Razorpay global type is already declared in CheckoutScreen.tsx
+
 export function BookInstallationScreen() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const isCombined = searchParams.get('mode') === 'combined';
   const sparePartId = Number(id);
   const navigate = useNavigate();
 
@@ -57,6 +79,7 @@ export function BookInstallationScreen() {
   const [scheduledAt, setScheduledAt] = useState<string>('');
   const [address, setAddress] = useState('');
   const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
+  const [userEditedAddress, setUserEditedAddress] = useState(false);
   const [locating, setLocating] = useState(false);
   const [location, setLocation] = useState<CustomerLocation | null>(null);
   const [radius, setRadius] = useState(25);
@@ -98,6 +121,13 @@ export function BookInstallationScreen() {
     return false;
   }, [step, vehicleId, scheduledAt, address, pickedLocation, location, mechanicId]);
 
+  // Auto-fill address from map reverse geocode (only when user hasn't manually typed)
+  useEffect(() => {
+    if (pickedLocation?.area && !userEditedAddress) {
+      setAddress(pickedLocation.area);
+    }
+  }, [pickedLocation, userEditedAddress]);
+
   const captureLocation = async () => {
     if (!isGeolocationSupported()) {
       toast('Geolocation is not supported by this browser. Please type your address manually.', 'error');
@@ -138,20 +168,96 @@ export function BookInstallationScreen() {
     setSubmitting(true);
     try {
       const finalLocation = pickedLocation || location;
-      await bookingApi.createInstallation({
-        vehicleId: vehicleId as number,
-        sparePartId,
-        scheduledAt: new Date(scheduledAt).toISOString(),
-        address: pickedLocation ? (address || pickedLocation.area) : address,
-        latitude: finalLocation?.latitude,
-        longitude: finalLocation?.longitude,
-        mechanicId: mechanicId as number,
-        preferredSkill: 'Spare Part Installation',
-        serviceArea: 'Spare Part Installation',
-      });
-      toast(`Installation booked! ${selectedMechanic ? selectedMechanic.name : 'Your mechanic'} will confirm shortly.`, 'success');
-      setStep(4);
-      setTimeout(() => navigate('/dashboard/installations'), 1800);
+      const finalAddress = pickedLocation ? (address || pickedLocation.area) : address;
+
+      if (isCombined) {
+        // ── Combined Buy + Install flow ────────────────────────────────
+        // 1. Create the spare-part order
+        const order = await ordersApi.create({
+          items: [{ sparePartId, quantity: 1 }],
+          address: finalAddress,
+        });
+
+        // 2. Create the installation booking (linked to order, skip payment check)
+        await bookingApi.createInstallation({
+          vehicleId: vehicleId as number,
+          sparePartId,
+          sparePartOrderId: order.id,
+          scheduledAt: new Date(scheduledAt).toISOString(),
+          address: finalAddress,
+          latitude: finalLocation?.latitude,
+          longitude: finalLocation?.longitude,
+          mechanicId: mechanicId as number,
+          preferredSkill: 'Spare Part Installation',
+          serviceArea: 'Spare Part Installation',
+          combinedPurchase: true,
+        });
+
+        // 3. Create Razorpay order for part + delivery + installation
+        await loadRazorpayScript();
+        const razorpayOrder = await paymentApi.createSparePartOrder(order.id, true);
+
+        // 4. Open Razorpay checkout
+        const user = (await import('@/stores/auth-store')).useAuthStore.getState().user;
+        const razorpay = new window.Razorpay!({
+          key: razorpayOrder.razorpayKeyId,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          name: 'AutoCare',
+          description: `Buy + Install · ${part?.name ?? 'Spare Part'}`,
+          order_id: razorpayOrder.razorpayOrderId,
+          prefill: user?.name ? { name: user.name } : undefined,
+          theme: { color: '#f59e0b' },
+          handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+            try {
+              const result = await paymentApi.verifyOrder({
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+              if (result.success) {
+                toast('Payment successful! Order confirmed & installation booked.', 'success');
+                setStep(4);
+                setTimeout(() => navigate('/dashboard/installations'), 2000);
+              } else {
+                toast('Payment could not be confirmed — please check your orders.', 'error');
+                setSubmitting(false);
+              }
+            } catch (err) {
+              toast(getErrorMessage(err), 'error');
+              setSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setSubmitting(false);
+              toast('Payment cancelled. Your order is saved — you can retry from My Orders.', 'info');
+            },
+          },
+        });
+        razorpay.on('payment.failed', () => {
+          setSubmitting(false);
+          toast('Payment failed — you can retry from My Orders.', 'error');
+        });
+        razorpay.open();
+        setSubmitting(false);
+      } else {
+        // ── Standard installation-only flow ────────────────────────────
+        await bookingApi.createInstallation({
+          vehicleId: vehicleId as number,
+          sparePartId,
+          scheduledAt: new Date(scheduledAt).toISOString(),
+          address: finalAddress,
+          latitude: finalLocation?.latitude,
+          longitude: finalLocation?.longitude,
+          mechanicId: mechanicId as number,
+          preferredSkill: 'Spare Part Installation',
+          serviceArea: 'Spare Part Installation',
+        });
+        toast(`Installation booked! ${selectedMechanic ? selectedMechanic.name : 'Your mechanic'} will confirm shortly.`, 'success');
+        setStep(4);
+        setTimeout(() => navigate('/dashboard/installations'), 1800);
+      }
     } catch (err) {
       toast(getErrorMessage(err), 'error');
       setSubmitting(false);
@@ -183,12 +289,24 @@ export function BookInstallationScreen() {
       <div className="mb-8 flex flex-wrap items-center gap-4 rounded-2xl border border-ink-100 bg-white p-4 dark:border-ink-800 dark:bg-ink-900">
         <img src={partImageUrl(part?.category ?? 'parts', part?.imageUrl)} alt={part?.name ?? ''} className="h-14 w-14 rounded-xl object-cover" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-bold text-ink-900 dark:text-ink-100">{part?.name ?? 'Spare part'} — Installation</p>
-          <p className="text-xs text-ink-400">Professional doorstep installation by a verified AutoCare mechanic</p>
+          <p className="truncate font-bold text-ink-900 dark:text-ink-100">{part?.name ?? 'Spare part'} — {isCombined ? 'Buy + Install' : 'Installation'}</p>
+          <p className="text-xs text-ink-400">{isCombined ? 'Purchase & professional installation in one go' : 'Professional doorstep installation by a verified AutoCare mechanic'}</p>
         </div>
         <div className="rounded-xl bg-brand-50 px-4 py-2 text-right dark:bg-brand-500/15">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Installation fee</p>
-          <p className="font-display text-lg font-extrabold text-brand-600 dark:text-brand-400">{formatCurrency(installationFee)}</p>
+          {isCombined ? (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Total</p>
+              <p className="font-display text-lg font-extrabold text-brand-600 dark:text-brand-400">
+                {formatCurrency((part?.price ?? 0) + (part?.deliveryFee ?? 80) + installationFee)}
+              </p>
+              <p className="text-[10px] text-ink-400">Part + Delivery + Install</p>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">Installation fee</p>
+              <p className="font-display text-lg font-extrabold text-brand-600 dark:text-brand-400">{formatCurrency(installationFee)}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -285,7 +403,10 @@ export function BookInstallationScreen() {
                     label="Full address (house no, street, landmark, city)"
                     placeholder="e.g. 42 MG Road, Koramangala, Bangalore"
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      setUserEditedAddress(true);
+                    }}
                   />
                   <p className="flex items-start gap-1.5 text-[11px] font-medium text-ink-400">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -385,21 +506,30 @@ export function BookInstallationScreen() {
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
                   <CheckCircle2 className="h-8 w-8" />
                 </div>
-                <h2 className="text-xl font-extrabold text-ink-900 dark:text-ink-100">Installation booked! 🎉</h2>
+                <h2 className="text-xl font-extrabold text-ink-900 dark:text-ink-100">{isCombined ? 'Order placed & installation booked!' : 'Installation booked!'} 🎉</h2>
                 <p className="mt-2 max-w-md text-sm text-ink-500">
-                  {part?.name} installation scheduled{selectedMechanic ? <> with <span className="font-semibold text-ink-900 dark:text-ink-100">{selectedMechanic.name}</span></> : ''}.
-                  Track it live from your installations page.
+                  {part?.name} {isCombined ? 'purchased & ' : ''}installation scheduled{selectedMechanic ? <> with <span className="font-semibold text-ink-900 dark:text-ink-100">{selectedMechanic.name}</span></> : ''}.
+                  Track it live from your dashboard.
                 </p>
                 <div className="mt-5 flex items-center gap-2 rounded-2xl bg-brand-50 px-5 py-3 dark:bg-brand-500/10">
                   <IndianRupee className="h-5 w-5 text-brand-500" />
                   <div className="text-left">
-                    <p className="text-xs text-ink-500">Installation fee</p>
-                    <p className="font-display text-lg font-extrabold text-brand-600 dark:text-brand-400">{formatCurrency(installationFee)}</p>
+                    {isCombined ? (
+                      <>
+                        <p className="text-xs text-ink-500">Total paid</p>
+                        <p className="font-display text-lg font-extrabold text-brand-600 dark:text-brand-400">
+                          {formatCurrency((part?.price ?? 0) + (part?.deliveryFee ?? 80) + installationFee)}
+                        </p>
+                        <p className="text-[10px] text-ink-400">Part + Delivery + Installation</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs text-ink-500">Installation fee</p>
+                        <p className="font-display text-lg font-extrabold text-brand-600 dark:text-brand-400">{formatCurrency(installationFee)}</p>
+                        <p className="text-[11px] text-ink-400">Pay after installation is completed</p>
+                      </>
+                    )}
                   </div>
-                  <Info className="ml-2 h-4 w-4 text-amber-500" />
-                  <p className="text-left text-[11px] font-medium text-ink-400">
-                    Pay after the installation is completed
-                  </p>
                 </div>
               </div>
             </motion.div>
@@ -417,7 +547,7 @@ export function BookInstallationScreen() {
           )}
           {step === 3 && (
             <Button onClick={submit} loading={submitting} disabled={!canNext}>
-              <Check className="h-4 w-4" /> Confirm Installation Booking
+              <Check className="h-4 w-4" /> {isCombined ? `Pay ${formatCurrency((part?.price ?? 0) + (part?.deliveryFee ?? 80) + installationFee)} — Buy + Install` : 'Confirm Installation Booking'}
             </Button>
           )}
         </div>

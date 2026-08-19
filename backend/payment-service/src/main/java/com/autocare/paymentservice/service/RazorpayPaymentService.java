@@ -345,9 +345,14 @@ public class RazorpayPaymentService {
      * Creates a Razorpay order for a spare-part purchase. The amount is resolved
      * server-side from the order's totalAmount — the client only sends the order
      * id and its JWT.
+     *
+     * <p>When {@code includeInstallationFee} is true the platform-configured
+     * installation fee is added so the customer pays for part + delivery +
+     * installation in a single Razorpay transaction (Buy + Install flow).</p>
      */
     @Transactional
-    public CreateSparePartOrderResponse createSparePartOrder(Long userId, Long orderId, String authHeader) {
+    public CreateSparePartOrderResponse createSparePartOrder(
+            Long userId, Long orderId, String authHeader, boolean includeInstallationFee) {
         // 1. Fetch + validate the order via spareparts-service
         Map<String, Object> order = sparePartsServiceClient.getOrderStatus(orderId, authHeader);
 
@@ -370,6 +375,17 @@ public class RazorpayPaymentService {
                     "Order #" + orderId + " has no payable amount.");
         }
 
+        // 2b. Buy + Install: add the platform-configured installation fee
+        BigDecimal razorpayAmount = totalAmount;
+        if (includeInstallationFee) {
+            BigDecimal installationFee = bookingServiceClient.currentInstallationFee();
+            if (installationFee != null && installationFee.compareTo(BigDecimal.ZERO) > 0) {
+                razorpayAmount = razorpayAmount.add(installationFee);
+                log.info("🔧 Combined Buy+Install: added installation fee {} to order #{} total {} → {}",
+                        installationFee, orderId, totalAmount, razorpayAmount);
+            }
+        }
+
         // 3. Duplicate payment prevention — one active/successful payment per order
         if (transactionRepository.existsByReferenceTypeAndReferenceIdAndStatusIn(
                 ReferenceType.SPARE_PART, orderId, ACTIVE_OR_DONE)) {
@@ -380,12 +396,12 @@ public class RazorpayPaymentService {
 
         // 4. Persist the INITIATED transaction, then create the Razorpay order
         Transaction transaction = new Transaction(
-                userId, ReferenceType.SPARE_PART, orderId, totalAmount, "RAZORPAY");
+                userId, ReferenceType.SPARE_PART, orderId, razorpayAmount, "RAZORPAY");
         transaction = transactionRepository.save(transaction);
 
         try {
             GatewayResult result = gateway.createOrder(
-                    totalAmount, "INR", "AC-SP-" + orderId + "-" + transaction.getId());
+                    razorpayAmount, "INR", "AC-SP-" + orderId + "-" + transaction.getId());
             transaction.setGatewayTransactionId(result.gatewayTransactionId());
             transaction = transactionRepository.save(transaction);
         } catch (PaymentGatewayException e) {
@@ -396,14 +412,14 @@ public class RazorpayPaymentService {
 
         log.info("💳 Razorpay order {} created for spare-part order #{} (txn #{}, {} {})",
                 transaction.getGatewayTransactionId(), orderId, transaction.getId(),
-                totalAmount, "INR");
+                razorpayAmount, "INR");
 
         return new CreateSparePartOrderResponse(
                 transaction.getId(),
                 orderId,
                 transaction.getGatewayTransactionId(),
                 gateway.getKeyId(),
-                totalAmount.multiply(BigDecimal.valueOf(100)).longValue(),
+                razorpayAmount.multiply(BigDecimal.valueOf(100)).longValue(),
                 "INR",
                 transaction.getStatus().name());
     }

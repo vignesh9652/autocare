@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, ArrowLeft, Truck, ShieldCheck, BookOpen, Wrench, Zap } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Truck, ShieldCheck, BookOpen, Wrench, Zap, PackageCheck } from 'lucide-react';
 import { diyApi, partsApi } from '@/lib/api';
 import { partImageUrl } from '@/lib/images';
 import { LoadingScreen, ErrorState } from '@/components/ui/Feedback';
@@ -53,7 +53,9 @@ export function PartDetailScreen() {
             {part.stockQuantity > 0 ? <Badge variant="success">In stock ({part.stockQuantity})</Badge> : <Badge variant="error">Out of stock</Badge>}
           </div>
           <h1 className="mt-3 font-display text-3xl font-bold text-ink-900 dark:text-white">{part.name}</h1>
+          {part.brand && <p className="mt-1 text-sm text-ink-500">by <span className="font-semibold text-ink-700 dark:text-ink-300">{part.brand}</span></p>}
           <p className="mt-2 font-display text-2xl font-bold text-brand-600 dark:text-brand-400">{formatCurrency(part.price)}</p>
+          <p className="mt-1 text-xs text-ink-400">Delivery: {formatCurrency(part.deliveryFee ?? 80)}</p>
           {part.description && <p className="mt-4 text-ink-600 dark:text-ink-300">{part.description}</p>}
 
           {part.compatibleVehicleModels && part.compatibleVehicleModels.length > 0 && (
@@ -71,7 +73,7 @@ export function PartDetailScreen() {
               disabled={part.stockQuantity === 0}
               onClick={() => {
                 addItem({ partId: part.id, name: part.name, price: part.price, category: part.category, imageUrl: partImageUrl(part.category, part.imageUrl), stock: part.stockQuantity });
-                toast('Added to cart', 'success');
+                toast(`${part.name} added to cart`, 'success');
               }}
             >
               <ShoppingCart className="h-5 w-5" /> Add to Cart
@@ -82,6 +84,7 @@ export function PartDetailScreen() {
               disabled={part.stockQuantity === 0}
               onClick={() => {
                 addItem({ partId: part.id, name: part.name, price: part.price, category: part.category, imageUrl: partImageUrl(part.category, part.imageUrl), stock: part.stockQuantity });
+                toast(`${part.name} added — proceeding to checkout`, 'success');
                 navigate('/checkout');
               }}
             >
@@ -117,6 +120,22 @@ export function PartDetailScreen() {
                     </div>
                     <Link to={`/parts/${part.id}/install`} className="mt-3">
                       <Button size="sm" className="w-full">Book a Mechanic</Button>
+                    </Link>
+                  </div>
+                )}
+                {mechanicAvailable && part.stockQuantity > 0 && (
+                  <div className="flex flex-col justify-between rounded-xl bg-brand-50 p-4 dark:bg-brand-500/10 sm:col-span-2">
+                    <div>
+                      <p className="flex items-center gap-2 text-sm font-bold text-ink-900 dark:text-ink-100">
+                        <PackageCheck className="h-4 w-4 text-brand-500" /> Buy + Install
+                      </p>
+                      <p className="mt-1 text-xs text-ink-500">Purchase the part and book a mechanic installation in one go.</p>
+                      <p className="mt-1 text-xs font-semibold text-brand-600 dark:text-brand-400">
+                        {formatCurrency(part.price)} + {formatCurrency(part.deliveryFee ?? 80)} delivery + installation
+                      </p>
+                    </div>
+                    <Link to={`/parts/${part.id}/install?mode=combined`} className="mt-3">
+                      <Button size="sm" className="w-full"><PackageCheck className="h-4 w-4" /> Buy + Install</Button>
                     </Link>
                   </div>
                 )}

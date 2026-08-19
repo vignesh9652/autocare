@@ -13,6 +13,13 @@ public class CreateSparePartOrderRequest {
     @NotNull(message = "Order id is required")
     private Long orderId;
 
+    /**
+     * When true, the platform-configured installation fee is added to the
+     * Razorpay order amount so the customer pays for part + delivery +
+     * installation in a single transaction.
+     */
+    private Boolean includeInstallationFee;
+
     public CreateSparePartOrderRequest() {
     }
 
@@ -22,5 +29,13 @@ public class CreateSparePartOrderRequest {
 
     public void setOrderId(Long orderId) {
         this.orderId = orderId;
+    }
+
+    public Boolean getIncludeInstallationFee() {
+        return includeInstallationFee;
+    }
+
+    public void setIncludeInstallationFee(Boolean includeInstallationFee) {
+        this.includeInstallationFee = includeInstallationFee;
     }
 }

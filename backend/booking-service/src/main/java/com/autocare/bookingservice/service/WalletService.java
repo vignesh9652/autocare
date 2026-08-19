@@ -133,7 +133,7 @@ public class WalletService {
 
     // ─── Queries ────────────────────────────────────────────────────────────
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AdminWalletResponse getAdminWallet() {
         AdminWallet wallet = getOrCreateAdminWallet();
         return new AdminWalletResponse(
@@ -148,7 +148,7 @@ public class WalletService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public MechanicWalletResponse getMechanicWallet(Long mechanicId) {
         MechanicWallet wallet = getOrCreateMechanicWallet(mechanicId);
         return new MechanicWalletResponse(

@@ -158,6 +158,8 @@ export interface SparePartResponse {
   price: number;
   stockQuantity: number;
   category: string;
+  brand?: string | null;
+  deliveryFee?: number;
   imageUrl?: string | null;
   tutorialVideoUrl?: string;
   installationSteps?: string;

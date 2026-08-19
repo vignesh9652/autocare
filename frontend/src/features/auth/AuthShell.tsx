@@ -63,9 +63,7 @@ export function AuthShell({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-white shadow-lg shadow-brand-500/30">
               <Wrench className="h-5 w-5" />
             </div>
-            <span className="font-display text-2xl font-bold text-white">
-              Auto<span className="text-gradient">Care</span>
-            </span>
+            <span className="font-display text-2xl font-bold text-white">AutoCare</span>
           </div>
 
           {/* Main tagline */}

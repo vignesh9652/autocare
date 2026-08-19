@@ -39,7 +39,7 @@ export function DashboardNavbar({ items }: { items: NavItem[] }) {
         {/* Brand */}
         <Link to="/" className="flex shrink-0 items-center gap-2 font-display text-xl font-bold text-ink-900 dark:text-white">
           <Wrench className="h-6 w-6 text-brand-500" />
-          Auto<span className="text-brand-500">Care</span>
+          AutoCare
         </Link>
 
         {/* Desktop horizontal nav */}
