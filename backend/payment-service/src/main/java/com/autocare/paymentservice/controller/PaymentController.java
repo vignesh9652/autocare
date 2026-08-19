@@ -54,8 +54,9 @@ public class PaymentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
+        boolean includeFee = Boolean.TRUE.equals(request.getIncludeInstallationFee());
         CreateSparePartOrderResponse response =
-                razorpayPaymentService.createSparePartOrder(userId, request.getOrderId(), authHeader);
+                razorpayPaymentService.createSparePartOrder(userId, request.getOrderId(), authHeader, includeFee);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

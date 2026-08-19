@@ -140,6 +140,8 @@ export interface InstallationBookingRequest {
   mechanicId?: number;
   preferredSkill?: string;
   serviceArea?: string;
+  /** When true, skips the payment-check on the backend (combined Buy+Install). */
+  combinedPurchase?: boolean;
 }
 
 // SSE live tracking — fetch-based so we can send the Authorization header
@@ -216,8 +218,8 @@ export const paymentApi = {
   createOrder: (bookingId: number) =>
     api.post<CreateOrderResponse>('/api/payments/create-order', { bookingId }).then((r) => r.data),
   /** Creates a Razorpay order for a spare-part purchase. Amount is resolved server-side. */
-  createSparePartOrder: (orderId: number) =>
-    api.post<CreateSparePartOrderResponse>('/api/payments/create-spare-part-order', { orderId }).then((r) => r.data),
+  createSparePartOrder: (orderId: number, includeInstallationFee = false) =>
+    api.post<CreateSparePartOrderResponse>('/api/payments/create-spare-part-order', { orderId, includeInstallationFee }).then((r) => r.data),
   /** Verifies the Razorpay signature on the backend and finalizes the payment. */
   verifyOrder: (data: VerifyPaymentRequest) =>
     api.post<VerifyPaymentResponse>('/api/payments/verify', data).then((r) => r.data),

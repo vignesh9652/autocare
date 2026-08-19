@@ -136,7 +136,10 @@ public class BookingService {
         vehicleServiceClient.validateVehicleOwnership(request.getVehicleId(), userId);
 
         // Link to the purchased order when provided (Buy + Book Mechanic flow).
-        if (request.getSparePartOrderId() != null) {
+        // For combined purchases (Buy+Install), the payment check is skipped because
+        // the customer pays for both the part and installation in one Razorpay transaction.
+        boolean isCombined = Boolean.TRUE.equals(request.getCombinedPurchase());
+        if (request.getSparePartOrderId() != null && !isCombined) {
             Map<String, Object> order = sparePartsServiceClient.getOrder(
                     request.getSparePartOrderId(), authHeader);
             if (order == null) {

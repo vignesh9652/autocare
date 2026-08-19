@@ -28,6 +28,10 @@ public class SparePartService {
                 request.getStockQuantity(),
                 request.getCategory().toUpperCase()
         );
+        part.setBrand(request.getBrand());
+        if (request.getDeliveryFee() != null) {
+            part.setDeliveryFee(request.getDeliveryFee());
+        }
         part.setTutorialVideoUrl(request.getTutorialVideoUrl());
         part.setInstallationSteps(request.getInstallationSteps());
         if (request.getMechanicInstallationAvailable() != null) {
@@ -82,6 +86,8 @@ public class SparePartService {
                 part.getPrice(),
                 part.getStockQuantity(),
                 part.getCategory(),
+                part.getBrand(),
+                part.getDeliveryFee(),
                 part.getImageUrl(),
                 part.getTutorialVideoUrl(),
                 part.getInstallationSteps(),

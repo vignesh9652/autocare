@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useCartStore } from '@/stores/cart-store';
+import { toast } from '@/stores/toast-store';
 import { partImageUrl } from '@/lib/images';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -52,23 +53,23 @@ export function CartScreen() {
                   <p className="text-xs text-ink-400">{item.category} · {formatCurrency(item.price)}</p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setQuantity(item.partId, item.quantity - 1)} className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800">
+                  <button onClick={() => { setQuantity(item.partId, item.quantity - 1); if (item.quantity <= 1) { removeItem(item.partId); toast(`${item.name} removed from cart`, 'info'); } else { toast(`Updated ${item.name} quantity to ${item.quantity - 1}`, 'info'); } }} className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800">
                     <Minus className="h-4 w-4" />
                   </button>
                   <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                  <button onClick={() => setQuantity(item.partId, item.quantity + 1)} className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800">
+                  <button onClick={() => { setQuantity(item.partId, item.quantity + 1); toast(`${item.name} quantity updated to ${item.quantity + 1}`, 'info'); }} className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800">
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
                 <p className="w-20 text-right font-semibold text-ink-900 dark:text-ink-100">{formatCurrency(item.price * item.quantity)}</p>
-                <button onClick={() => removeItem(item.partId)} className="rounded-lg p-1.5 text-ink-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10">
+                <button onClick={() => { removeItem(item.partId); toast(`${item.name} removed from cart`, 'info'); }} className="rounded-lg p-1.5 text-ink-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </motion.div>
             ))}
           </AnimatePresence>
 
-          <button onClick={clear} className="text-xs font-medium text-red-600 hover:underline">
+          <button onClick={() => { clear(); toast('Cart cleared', 'info'); }} className="text-xs font-medium text-red-600 hover:underline">
             Clear cart
           </button>
         </div>

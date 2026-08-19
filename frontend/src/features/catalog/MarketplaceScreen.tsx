@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { partsApi } from '@/lib/api';
 import { partImageUrl } from '@/lib/images';
 import { useCartStore } from '@/stores/cart-store';
+import { toast } from '@/stores/toast-store';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/Feedback';
@@ -91,7 +92,7 @@ export function MarketplaceScreen() {
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-lg font-extrabold text-ink-900 dark:text-ink-100">{formatCurrency(p.price)}</span>
                   <button
-                    onClick={() => addItem({ partId: p.id, name: p.name, price: p.price, category: p.category, imageUrl: partImageUrl(p.category, p.imageUrl), stock: p.stockQuantity })}
+                    onClick={() => { addItem({ partId: p.id, name: p.name, price: p.price, category: p.category, imageUrl: partImageUrl(p.category, p.imageUrl), stock: p.stockQuantity }); toast(`${p.name} added to cart`, 'success'); }}
                     className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white transition hover:bg-brand-600 active:scale-95"
                     title="Add to cart"
                   >
