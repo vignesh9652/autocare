@@ -1,0 +1,80 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: admin-service
+
+  # NOTE: admin-service intentionally has NO datasource / JPA / RabbitMQ —
+  # it is a read-only aggregation layer over the other services.
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
+
+app:
+  jwt:
+    secret: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
+    expiration-ms: 86400000
+
+# Resilience4j Circuit Breaker configuration.
+# One circuit breaker instance per downstream service. If a downstream call
+# fails enough times the breaker opens and the fallback method returns a
+# "service temporarily unavailable" partial result instead of failing the
+# whole admin request.
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      userService:
+        base-config: default
+      vehicleService:
+        base-config: default
+      mechanicService:
+        base-config: default
+      bookingService:
+        base-config: default
+      paymentService:
+        base-config: default
+      sparePartsService:
+        base-config: default
+      reviewService:
+        base-config: default
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s
+    instances:
+      userService:
+        base-config: default
+      vehicleService:
+        base-config: default
+      mechanicService:
+        base-config: default
+      bookingService:
+        base-config: default
+      paymentService:
+        base-config: default
+      sparePartsService:
+        base-config: default
+      reviewService:
+        base-config: default
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

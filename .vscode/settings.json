@@ -1,0 +1,7 @@
+{
+  // Tailwind CSS at-rules (@tailwind, @layer, @apply, @screen, @config, @variants)
+  // are handled by the PostCSS/Tailwind build, not by the CSS spec.
+  // VS Code's built-in CSS linter flags them as "Unknown at-rule" otherwise.
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore"
+}

@@ -1,0 +1,3 @@
+# AutoCare API Gateway
+
+The API Gateway is the single entry point for all client requests into the AutoCare microservices platform. Built on Spring Cloud Gateway, it routes requests to the appropriate backend service by resolving service names registered with the Eureka Discovery Server. With the discovery locator enabled and lower-case service IDs configured, the gateway automatically creates routes based on Eureka service IDs — for example, a request to `/user-service/api/auth/login` is forwarded to the `user-service` instance registered with Eureka. The gateway runs on port **8080** and registers itself with the Eureka server at `http://localhost:8761/eureka`.
