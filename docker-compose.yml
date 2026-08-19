@@ -1,0 +1,10 @@
+# Convenience wrapper so `docker compose up` works from the project root.
+#
+# The real stack definition lives in docker/docker-compose.yml (it builds each
+# service from ../backend and ../frontend). This file just includes it and pins
+# the Compose project name to `docker` so the existing `docker_mysql_data`
+# volume (your live database) is reused instead of creating a fresh empty one.
+name: docker
+
+include:
+  - docker/docker-compose.yml

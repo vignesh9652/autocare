@@ -1,0 +1,38 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: user-service
+
+  # Default: MySQL database
+  datasource:
+    url: jdbc:mysql://localhost:3306/autocare_users
+    username: root
+    password: Vignesh@2004
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
+
+app:
+  jwt:
+    secret: 5a3f8c92b1e6d4a7f0c9e8b2d1a4f6c7e0d9b8a2f3c4e5d6a7b8c9d0e1f2a3b4
+    expiration-ms: 86400000
+  admin:
+    email: ${APP_ADMIN_EMAIL:admin@autocare.com}
+    password: ${APP_ADMIN_PASSWORD:Admin@123}
+

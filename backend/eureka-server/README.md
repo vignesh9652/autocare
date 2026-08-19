@@ -1,0 +1,3 @@
+# AutoCare Eureka Server
+
+This is the **service discovery server** for the AutoCare microservices platform, built with Spring Cloud Netflix Eureka. It acts as a central registry where all microservices register themselves upon startup and discover other services at runtime. By running on port `8761` and not registering itself, it provides a reliable, lightweight registry that enables dynamic load balancing, failover, and horizontal scaling across the AutoCare ecosystem. Other AutoCare services (e.g., API Gateway, Vehicle Service, User Service) will point their Eureka clients to this server to participate in service discovery.

@@ -1,0 +1,139 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            # The React frontend runs on its own origin; allow it to call the
+            # gateway directly (baseURL = VITE_API_BASE_URL) in development.
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:5173"
+            # The dev server may land on any local port (e.g. 3001 when 3000 is
+            # already taken by the nginx container), so also allow every
+            # localhost / 127.0.0.1 origin via patterns.
+            allowedOriginPatterns:
+              - "http://localhost:*"
+              - "http://127.0.0.1:*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            exposedHeaders:
+              - "Location"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        # User Service - Auth endpoints
+        - id: user-service-auth
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/auth/**
+
+        # User Service - user management (admin-only endpoints, e.g. /api/users/admin/**)
+        - id: user-service-users
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/users/**
+
+        # Vehicle Service
+        - id: vehicle-service
+          uri: lb://VEHICLE-SERVICE
+          predicates:
+            - Path=/api/vehicles/**
+
+        # Mechanic Service
+        - id: mechanic-service
+          uri: lb://MECHANIC-SERVICE
+          predicates:
+            - Path=/api/mechanics/**
+
+        # Booking Service
+        - id: booking-service
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/bookings/**
+
+        # Platform Service Catalogue (owned by booking-service)
+        - id: booking-service-services
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/services/**
+
+        # Additional Services / Vehicle Inspection (owned by booking-service)
+        - id: booking-service-additional-services
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/additional-services/**
+
+        # Wallets / money distribution (owned by booking-service)
+        - id: booking-service-wallet
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/wallet/**
+
+        # Payment Service
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payments/**
+
+        # Spare Parts Service
+        - id: spareparts-service
+          uri: lb://SPAREPARTS-SERVICE
+          predicates:
+            - Path=/api/parts/**
+
+        # Spare part orders (owned by spareparts-service)
+        - id: spareparts-orders
+          uri: lb://SPAREPARTS-SERVICE
+          predicates:
+            - Path=/api/orders/**
+
+        # Recommendations (also routed to spareparts-service)
+        - id: spareparts-recommendations
+          uri: lb://SPAREPARTS-SERVICE
+          predicates:
+            - Path=/api/recommendations/**
+
+        # DIY guide management (owned by spareparts-service). Declared before
+        # the admin-service catch-all so /api/admin/diy-guides/** lands here.
+        - id: spareparts-diy-admin
+          uri: lb://SPAREPARTS-SERVICE
+          predicates:
+            - Path=/api/admin/diy-guides/**
+
+        # Review Service
+        - id: review-service
+          uri: lb://REVIEW-SERVICE
+          predicates:
+            - Path=/api/reviews/**
+
+        # Notification Service
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notifications/**
+
+        # Admin Service (admin-only aggregation endpoints)
+        - id: admin-service
+          uri: lb://ADMIN-SERVICE
+          predicates:
+            - Path=/api/admin/**
+
+      discovery:
+        locator:
+          enabled: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
